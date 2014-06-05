@@ -100,8 +100,7 @@ struct game *new_game(struct game *games){
 	}
 
 	(*new_game).tiles = tiles();
-
-	time(&(*new_game).start_t);
+	(*new_game).start_t = 0;
 	(*new_game).end_t = 0;
 	(*new_game).done = 0;
 	(*new_game).mosaic = NULL;

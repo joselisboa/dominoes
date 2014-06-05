@@ -15,16 +15,15 @@ int cleanup();
 int getspid();
 int procs();
 int count_players();
-
 int send(struct response res, struct request req);
 struct response resdef(int cmd, char msg[], struct request req);
-
 struct response leave(struct request req);// same as leave?
 struct response logout(struct request req);
 struct response status(struct request req);
 struct response users(struct request req);
 struct response add_game(struct request req);
 struct response list_games(struct request req);
+struct response list_players(struct request req);
 struct response play_tile(struct request req);
 struct response leaves(struct request req);
 struct response login(struct request req);
@@ -35,36 +34,14 @@ struct response game_tiles(struct request req);
 struct response play_game(struct request req);
 struct response get(struct request req);
 struct response pass(struct request req);
+struct response ni(struct request req);
 struct response help(struct request req);
 struct response giveup(struct request req);
 
-// not implemented
-struct response ni(struct request req);
-
 struct game *games = NULL;
 struct player *players = NULL;
-
+struct player *playing = NULL;
 int client_fifo, server_fifo;
-//-----------------------------------------------------------------------------
-// USERS
-struct response list_players(struct request req){
-    struct response res = resdef(1, "OK players", req);
-    struct player *node = games->players;
-    char msg[512];
-    char line[64];
-
-    msg[0] = '\0';
-    line[0] ='\0';
-
-    while(node != NULL){
-        sprintf(line, "%d %s %d %s (%d)\n",
-            node->id, node->name, node->pid, node->fifo, node->wins);
-        strcat(msg, line);       
-        node = node->prev;
-    }
-    strcpy(res.msg, msg);
-    return res;
-}
 
 //-----------------------------------------------------------------------------
 // M A I N
@@ -277,12 +254,9 @@ struct response status(struct request req){
 struct response users(struct request req){
     struct response res = resdef(1, "OK users", req);
     struct player *node = players;
-    char msg[512];
-    char line[64];
-
+    char msg[512], line[64];
     msg[0] = '\0';
     line[0] ='\0';
-
     while(node != NULL){
         sprintf(line, "%d %s %d %s (%d)\n",
             node->id, node->name, node->pid, node->fifo, node->wins);
@@ -294,12 +268,76 @@ struct response users(struct request req){
 }
 
 //-----------------------------------------------------------------------------
+// GAMES (List)
+struct response list_games(struct request req){
+    struct response res = resdef(1, "OK games", req);
+    struct game *node = games;
+    char msg[512], line[64], status[16];
+    if(node == NULL){
+        res.cmd = 0;
+        strcpy(res.msg, "there aren't any games");
+        return res;
+    }
+    msg[0] = '\0';
+    line[0] ='\0';
+    while(node != NULL){
+        if(!node->start_t) {
+            if(!node->done) strcpy(status, "waiting");
+            else strcpy(status, "expired");
+        }
+        else {
+            if(!node->done) strcpy(status, "playing");
+            else if(node->winner == NULL) strcpy(status, "none");
+            else sprintf(status, "winner: %s", node->winner->name);
+        }
+       
+        sprintf(line, "%d %s (%s)\n", node->id, node->name, status);
+        strcat(msg, line);       
+        node = node->prev;
+    }
+    
+    strcpy(res.msg, msg);
+
+    return res;
+}
+
+//-----------------------------------------------------------------------------
+// PLAYERS lists players in live game
+struct response list_players(struct request req){
+    struct response res = resdef(1, "OK listing players", req);
+    struct player *node = NULL;
+    char msg[512];
+    char line[64];
+    
+    if(games == NULL){
+        res.cmd = 0;
+        strcpy(res.msg, "there aren't any players");
+        return res;
+    }
+    
+    node = games->players;
+    
+    msg[0] = '\0';
+    line[0] ='\0';
+    
+    while(node != NULL){
+        sprintf(line, "%d %s %d %s (%d)\n",
+            node->id, node->name, node->pid, node->fifo, node->wins);
+        strcat(msg, line);       
+        node = node->prev;
+    }
+    
+    strcpy(res.msg, msg);
+    return res;
+}
+
+//-----------------------------------------------------------------------------
 // NEW (Add Game)
 struct response add_game(struct request req){
     struct response res = resdef(1, "OK new", req);
     char name[32];
     int t, pid;
-    
+
     if(games != NULL && !games->done) {
         strcpy(res.msg, "there's a live game");
         res.cmd = 0;
@@ -307,6 +345,8 @@ struct response add_game(struct request req){
     }
 
     sscanf(req.cmd, "new %s %d", name, &t);
+    sprintf(res.msg, "new game '%s' created", name);
+
     games = new_game(games);
     strcpy(games->name, name);
     games->t = t;
@@ -321,66 +361,41 @@ struct response add_game(struct request req){
 }
 
 //-----------------------------------------------------------------------------
-// GAMES (List)
-struct response list_games(struct request req){
-    struct response res = resdef(1, "OK games", req);
-    struct game *aux = games;
-    char msg[512];
-    int i, j=0, l;
-
-    while(aux != NULL){
-        l = strlen(aux->name);
-        for(i=0; i<l; i++){
-            msg[j++] = aux->name[i];
-            if(j==511) break;
-        }
-        if(j==511) break;
-
-        //TODO active game, winner
-
-        aux = aux->prev;
-
-        if(aux != NULL) msg[j++] = '\n';
-    }
-    msg[j] = '\0';
-    strcpy(res.msg, msg);
-
-    return res;
-}
-
-//-----------------------------------------------------------------------------
 // PLAY (adds player to game)
 struct response play_game(struct request req){
     struct response res = resdef(1, "OK play", req);
-    struct player node, *user = NULL;
+    struct player node, *user = NULL, *player = NULL;
     char msg[512];
+    int i, n = count_players();
 
+    // there are no games
     if(games == NULL){
         strcpy(res.msg, "create a game first");
         res.cmd = 2;
         return res;
     }
 
+    // player already subscribed?
+    player = get_player_by_name(req.name, games->players);
+    if(player != NULL){
+        sprintf(res.msg, "you already subscribed to '%s'", games->name);
+        res.cmd = 0;
+        return res;
+    }
+    else sprintf(res.msg, "subscribed to '%s'", games->name);
 
-// check if player already exists
-
-
+    // open game
     if(!games->done){
         user = get_player_by_id(req.player_id, players);
-        
         node.id = user->id;
-        
         node.pid = user->pid;
-        
         node.login_t = user->login_t;
-        
         strcpy(node.name, user->name);
         strcpy(node.fifo, user->fifo);
-        
         add_player(node, games);
     }
     else {
-        sprintf(msg,"game '%s' expired", games->name);
+        sprintf(msg,"'%s' expired", games->name);
         strcpy(res.msg, msg);
         res.cmd = 2;
     }
@@ -475,39 +490,56 @@ int count_players(){
 //-----------------------------------------------------------------------------
 // INIT (Start Game) SIGALRM handler
 void init(int sig){
-    struct player *node = games->players;
+    struct player *node, *player = games->players;;
     int player_fifo;
-
-    struct status stat;
-    int done = 0, n = 0;
-
-    strcpy(stat.name, games->name);
-    strcpy(stat.tiles, "[0,0][0,3]");
-    stat.winner = 0;
-    stat.done = 0;
+    struct move status;
+    int done, k, i=0, n = count_players();
+    char hand[128];
   
-    if(count_players() > 1){
-        while(node != NULL){
-            kill(node->pid, SIGUSR1);
-            sleep(1);
+    if(count_players() > 1){        
+        // menssagem
+        strcpy(status.name, games->name);
+        status.winner = 0;
+        
+        player = games->players;
+        while(player != NULL){
+            strcpy(status.players[i++], player->name);
+            if(player->prev == NULL) playing = player;
+            player = player->prev;
+        }
+        for(i; i<4; i++) status.players[i][0] = '\0';
 
-    //.........................................................................
-    done = 0;
-    n = 0;
-    do {// [3] Abrir FIFO do cliente em modo de escrita
-        if((player_fifo = open(node->fifo, O_WRONLY | O_NDELAY)) == -1){
-          sleep(5);  
-        } 
-        else {// [5] Enviar resposta pelo FIFO do cliente
-            write(player_fifo, &stat, sizeof(stat));
-            close(player_fifo);
-            done = 1;
+        // enviar dados aos jogadores do jogo
+        player = games->players;
+        while(player != NULL){
+        //for(i=1; i < n +1; i++){
+            //player = get_player_by_id(i, games->players); 
+            kill(player->pid, SIGUSR1);
+            done = 0;
+            k = 0;
+            do {// abrir FIFO do jogador em modo de escrita
+                if((player_fifo = open(player->fifo, O_WRONLY | O_NDELAY)) == -1){
+                  sleep(5);
+                }
+                else {
+                    status.msg[0] = '\0';
+                    strcpy(status.msg, "\nStarting Game ");
+                    strcat(status.msg, games->name);                    
+                    sprintf(hand, "\n\033[0;32m%s, your dominoes\n 1:[0,0]\n23:[3,1]\033[0m\n", player->name);                                     
+                    strcat(status.msg, hand);
+                    //"\033[0;35m",//mangeta2
+                    status.turn = 1;
+                    sprintf(hand, "\nwaiting for \033[0;35m%s\033[0m to play", playing->name);
+                    strcat(status.msg, hand);  
+                    // enviar resposta pelo FIFO do jogador
+                    write(player_fifo, &status, sizeof(status));
+                    close(player_fifo);
+                    sleep(1);
+                    done = 1;
+                }
+            } while(k++ < 5 && !done);
         }
-    } while(n++ < 5 && !done);
-    //.........................................................................
- 
-            node = node->prev;
-        }
+        player = player->prev;
     }
     else games->done = 1;
 }

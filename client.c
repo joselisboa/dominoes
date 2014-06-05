@@ -8,11 +8,9 @@ int server_fifo, client_fifo;
 struct request req;
 struct response res;
 
-void init(int sig);
 void play(int sig);
 void quit(int sig);
 void print_response(struct response res);
-int scanz(char *buffer);
 void getname(char name[]);//, char *prompt[], char *format[]){
 struct response send(struct request req);
 void shutdown(int spid);
@@ -30,7 +28,7 @@ int main(int argc, char charv[]){
     char buffer[256], name[32];
 
     // signals setup
-    signal(SIGUSR1, init);// turn to play play  
+    signal(SIGUSR1, play);// turn to play play  
     signal(SIGUSR2, quit);// "...avisa os outros programas..."
 
 INIT:
@@ -60,7 +58,7 @@ LOGIN:
     res.msg[0] = '\0';
     res.cmd = 0;
     req.player_id = 0;
-
+    
     // get player's name
     getname(req.name);//, " your name: ", " %[a-ZA-Z0-9_]");
 
@@ -81,9 +79,9 @@ LOGIN:
     req.player_id = res.req.player_id;
     _printf(3, "welcome, %s\n", req.name);
 
-
     // CMD LOOP
     while(1){
+
         // [3] player input
         printf("$ ");
         scanf(" %[^\n]", req.cmd);
@@ -136,7 +134,7 @@ int validate_cmd(char command[]){
     char cmd[8], param1[16], param2[16];
     int i, k;
 
-    // scan command
+    // scan user commands
     if(!(k = sscanf(command, "%s %s %s", cmd, param1, param2))) return 0;
     //printf("k=%d, cmd=%s, param1=%s, param2=%s", k, cmd, param1, param2);
 
@@ -244,20 +242,13 @@ int validate_cmd(char command[]){
 }
 
 // ----------------------------------------------------------------------------
-// scanz all user's input
-int scanz(char *buffer){
-    scanf("%[^\n]", buffer);
-}
-
-// ----------------------------------------------------------------------------
 // prompts player's name
 void getname(char name[]){//, char *prompt[], char *format[]){
     char buffer[32];
-    int i, r=0;
+    int i, r = 0;
 
     while(!r){
     BEGIN:
-
         _puts("your name:", 3);
         printf("$ ");
         scanf(" %[^\n]", buffer);
@@ -278,7 +269,7 @@ void getname(char name[]){//, char *prompt[], char *format[]){
 }
 
 //-----------------------------------------------------------------------------
-// SEND REQUEST
+// sends request to server
 struct response send(struct request req){
     struct response res;
 
@@ -302,7 +293,7 @@ struct response send(struct request req){
 }
 
 // ----------------------------------------------------------------------------
-// SHUTDOWN
+// SHUTDOWN shuts down server and exits
 void shutdown(int spid){
     _printf(8, "kill -%d  %d [%d]\n", SIGUSR2, spid, kill(spid, SIGUSR2));
     //TODO check status?
@@ -329,7 +320,7 @@ void start(char proc[]){
 }
 
 // ----------------------------------------------------------------------------
-// GET PID (from running process) 
+// Gets the PID from a running process 
 int getzpid(char proc[]){
     char buffer[16], format[64];
     FILE *finput;
@@ -354,6 +345,53 @@ int getzpid(char proc[]){
 }
 
 //-----------------------------------------------------------------------------
+// PLAY (game play) SIGUSR1 handler
+void play(int sig){
+    struct move status;
+    int len;
+
+    // [5] abrir fifo privado em modo de leitura
+    if((client_fifo = open(req.fifo, O_RDONLY)) < 0){
+        perror(req.fifo);
+        return;
+    }
+
+    // [6] ler dados
+    read(client_fifo, &status, sizeof(status));
+    // fechar o fifo do cliente
+    close(client_fifo);
+
+    // get game info
+
+    puts(status.msg);
+    printf("$ ");
+    fflush(stdout);
+}
+
+//-----------------------------------------------------------------------------
+// QUIT closes client (SIGUSR2 handler)
+void quit(int sig){
+    int i=4;
+    _puts("\nthe server is shutting down", 3);
+    _puts("shutting down client now", 4);
+    fflush(stdout);
+    
+    while(i > 0){
+        _printf(3, "%d\n", --i);
+        sleep(1);  
+    }
+
+    exit(cleanup());
+}
+
+//-----------------------------------------------------------------------------
+int cleanup(){
+    close(server_fifo);
+    unlink(req.fifo);
+    return 1;
+}
+
+//-----------------------------------------------------------------------------
 // DEV
 void print_response(struct response res){
     puts("res: {");
@@ -368,57 +406,4 @@ void print_response(struct response res){
     puts("    },");
     printf("    res: %d\n", res.cmd);
     puts("}");
-}
-
-//-----------------------------------------------------------------------------
-// INIT (start/finish game) SIGALRM handler
-void init(int sig){
-    struct status stat;
-
-    // [5] abrir fifo privado em modo de leitura
-    if((client_fifo = open(req.fifo, O_RDONLY)) < 0){
-        perror(req.fifo);
-        return;
-    }
-
-    // [6] ler dados
-    read(client_fifo, &stat, sizeof(stat));
-    // fechar o fifo do cliente
-    close(client_fifo);
-
-    // get game info
-
-   _printf(3, "game '%s' started", stat.name);
-   printf("tiles\n%s\n$ ", stat.tiles);
-}
-
-//-----------------------------------------------------------------------------
-// PLAY (play tile) - SIGUSR1 handler
-void play(int sig){
-   
-   // get play hand
-
-   _puts("\nyour turn to play", 3);
-   printf("pick a tile\n$ ");
-
-}
-
-//-----------------------------------------------------------------------------
-// QUIT (close client) - SIGUSR2 handler
-void quit(int sig){
-    int i=4;
-    _puts("\nthe server is shutting down", 3);
-    _puts("shutting down client now", 4);
-    while(i > 0){
-        _printf(4, "%d\n", --i);
-        sleep(1);  
-    }
-
-    exit(cleanup());
-}
-
-int cleanup(){
-    close(server_fifo);
-    unlink(req.fifo);
-    return 1;
 }
