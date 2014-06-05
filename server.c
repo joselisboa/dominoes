@@ -8,9 +8,10 @@
 //get_ends (mosaic_ends), validate_tile, tile_exists (has_tile),
 //player_status, get_winner
 
-void init();
-void stop();
-void show();
+void init(int sig);
+void stop(int sig);
+void show(int sig);
+int cleanup();
 int getspid();
 int procs();
 int count_players();
@@ -37,6 +38,7 @@ struct response get(struct request req);
 struct response pass(struct request req);
 struct response help(struct request req);
 struct response giveup(struct request req);
+
 // not implemented
 struct response ni(struct request req);
 
@@ -70,8 +72,7 @@ int main(int argc, char *charv[]){
     if(procs() > 1) {
         spid = getspid();
         for(i=0; i<A; i++)
-            if(strcmp(A_CMDS[i], charv[1]) == 0)
-                kill(spid, A_SIGS[i]);
+            if(strcmp(A_CMDS[i], charv[1]) == 0) kill(spid, A_SIGS[i]);
         exit(0);
     }
 
@@ -107,12 +108,14 @@ int main(int argc, char *charv[]){
 
             // command router
             switch(i) {
-
-                case 0://login
+                
+                // login
+                case 0:
                     res = login(req);
                     break;
 
-                case 1://exit
+                // exit
+                case 1:
                     res = leaves(req);
 
                     break;
@@ -196,24 +199,30 @@ int main(int argc, char *charv[]){
                 exit(1);
             }
         }
+
+        close(server_fifo);
     }
-    return 0;
+
+    return cleanup();
 }
 
 //-----------------------------------------------------------------------------
 // FUNCTIONS
 //-----------------------------------------------------------------------------
-// kill -s USR2 <pid>
-void stop(){
-    // tell players to quit
-    //warn();
+// CLOSE / STOP  (kill -s USR2 <pid>)
+void stop(int sig){
+    struct player *node = players;
+
+    while(node != NULL) {
+        kill((*node).pid, SIGUSR2);
+        node = node->prev;
+    }
     //sleep(5);
-    unlink(DOMINOS);
-    exit(0);
+    cleanup();
 }
 
-void show(){
-    puts("SHOW NOT IMPLEMENTED");
+void show(int sig){
+    printf("\nSHOW NOT IMPLEMENTED YET\n$ ");
 }
 
 //-----------------------------------------------------------------------------
@@ -232,7 +241,7 @@ struct response logout(struct request req){
 //-----------------------------------------------------------------------------
 // STATUS
 struct response status(struct request req){
-     return ni(req);
+    return ni(req);
 }
 
 //-----------------------------------------------------------------------------
@@ -426,7 +435,7 @@ int count_players(){
 
 //-----------------------------------------------------------------------------
 // INIT (Start Game)
-void init(){
+void init(int sig){
     struct player *node = games->players;
 
     if(count_players() > 1){
@@ -538,4 +547,9 @@ int send2(struct response res, char client_fifo[]){
     } while(n++ < 5 && !done);
 
     return done;
+}
+
+int cleanup(){
+    unlink(DOMINOS);
+    exit(0);
 }

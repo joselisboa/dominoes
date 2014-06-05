@@ -56,6 +56,22 @@ struct response {
 	int cmd;// 0:msg, 1:quit, -1:error
 };
 
+struct hand {
+    int now;// 1
+    int next;// 2
+    char players[4][32];// [0,1,2,3]=>[John, Leo, Maria, Iuri] 
+    int tile_id; // 1
+    char tile[8];// [0,0]
+};
+
+struct status {
+    char name[32];
+    int done;
+    char players[4][32];
+    char tiles[50];
+    int winner; 
+};
+
 int send_signal(int pid, int SIG){
     int ret;
     ret = kill(pid, SIG);

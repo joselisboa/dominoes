@@ -8,9 +8,9 @@ int server_fifo;
 struct request req;
 struct response res;
 
-void init();
-void play();
-void quit();
+void init(int sig);
+void play(int sig);
+void quit(int sig);
 void print_response(struct response res);
 int scanz(char *buffer);
 void getname(char name[]);//, char *prompt[], char *format[]){
@@ -20,11 +20,7 @@ void restart(char proc[]);
 void start(char proc[]);
 int validate_cmd(char command[]);
 int getzpid(char proc[]);
-int cleanup(){
-    close(server_fifo);
-    unlink(req.fifo);
-    return 1;
-}
+int cleanup();
 
 //-----------------------------------------------------------------------------
 // M A I N
@@ -35,8 +31,8 @@ int main(int argc, char charv[]){
     char buffer[256], name[32];
 
     // signals setup
-    signal(SIGUSR1, quit);// "...avisa os outros programas..."
-    signal(SIGUSR2, play);// turn to play
+    signal(SIGUSR2, quit);// "...avisa os outros programas..."
+    signal(SIGUSR1, play);// turn to play
     signal(SIGALRM, init);// game started
 
 INIT:
@@ -292,7 +288,7 @@ void shutdown(int spid){
     _printf(8, "kill -%d  %d [%d]\n", SIGUSR2, spid, kill(spid, SIGUSR2));
     //TODO check status?
     cleanup();
-    exit(1);
+    //exit(1);
 }
 
 // ----------------------------------------------------------------------------
@@ -314,7 +310,7 @@ void start(char proc[]){
 }
 
 // ----------------------------------------------------------------------------
-// GET (RUNNING PROCESS) PID
+// GET PID (from running process) 
 int getzpid(char proc[]){
     char buffer[16], format[64];
     FILE *finput;
@@ -355,17 +351,43 @@ void print_response(struct response res){
     puts("}");
 }
 
-// ----------------------------------------------------------------------------
-void init(){
+//-----------------------------------------------------------------------------
+// INIT (start/finish game) SIGALRM handler
+void init(int sig){
+
+    // get game info
+
    _puts("game started", 3);
+   printf("game info\n$ ");
 }
 
-// ----------------------------------------------------------------------------
-void play(){
-   _puts("your turn to play", 3);
+//-----------------------------------------------------------------------------
+// PLAY (play tile) - SIGUSR1 handler
+void play(int sig){
+   
+    // get play hand
+
+   _puts("\nyour turn to play", 3);
+   printf("pick a tile\n$ ");
+
 }
 
-// ----------------------------------------------------------------------------
-void quit(){
-    _puts("server is shutting down", 3);
+//-----------------------------------------------------------------------------
+// QUIT (close client) - SIGUSR2 handler
+void quit(int sig){
+    int i=4;
+    _puts("\nthe server is shutting down", 3);
+    _puts("shutting down client now", 4);
+    while(i > 0){
+        _printf(4, "%d\n", --i);
+        sleep(1);  
+    }
+
+    exit(cleanup());
+}
+
+int cleanup(){
+    close(server_fifo);
+    unlink(req.fifo);
+    return 1;
 }
