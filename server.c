@@ -18,7 +18,6 @@ int count_players();
 
 int send(struct response res, struct request req);
 struct response resdef(int cmd, char msg[], struct request req);
-int validate_game(struct game *aux_game);
 
 struct response leave(struct request req);// same as leave?
 struct response logout(struct request req);
@@ -528,23 +527,6 @@ struct response resdef(int cmd, char msg[], struct request req){
     return res;
 }
 
-//TODO remove
-//-----------------------------------------------------------------------------
-// Validates Game
-int validate_game(struct game *aux_game){
-    double diff_t;
-    time_t now_t;
-
-    time(&now_t);
-
-    if(difftime(now_t, aux_game->start_t) > (float) aux_game->t){
-        aux_game->done = 1;
-        return 0;
-    };
-
-    return 1;
-}
-
 //-----------------------------------------------------------------------------
 // NI (Not Implemented Response)
 struct response ni(struct request req){
@@ -589,7 +571,7 @@ int procs(){
 int send(struct response res, struct request req){
     int done = 0, n = 0;
 
-    do {// [3] Abrir FIFO do cliente em modo de escrita
+    do {// Abrir FIFO do cliente em modo de escrita
         if((client_fifo = open(req.fifo, O_WRONLY | O_NDELAY)) == -1) sleep(5);
         else {// [5] Enviar resposta pelo FIFO do cliente
             write(client_fifo, &res, sizeof(res));
