@@ -4,7 +4,7 @@
 #define SERVER "./server"
 #define FIFOPATH "/tmp/fifo"
 
-int server_fifo;
+int server_fifo, client_fifo;
 struct request req;
 struct response res;
 
@@ -14,7 +14,7 @@ void quit(int sig);
 void print_response(struct response res);
 int scanz(char *buffer);
 void getname(char name[]);//, char *prompt[], char *format[]){
-struct response send(struct request req, int server_fifo, int client_fifo);
+struct response send(struct request req);
 void shutdown(int spid);
 void restart(char proc[]);
 void start(char proc[]);
@@ -26,14 +26,12 @@ int cleanup();
 // M A I N
 //-----------------------------------------------------------------------------
 int main(int argc, char charv[]){
-    int client_fifo;
     int i, k, n, r, player_id;
     char buffer[256], name[32];
 
     // signals setup
+    signal(SIGUSR1, init);// turn to play play  
     signal(SIGUSR2, quit);// "...avisa os outros programas..."
-    signal(SIGUSR1, play);// turn to play
-    signal(SIGALRM, init);// game started
 
 INIT:
 
@@ -54,6 +52,7 @@ INIT:
         perror(DOMINOS);
         exit(1);
     }
+    
 // Jogador já tem FIFO e o servidor a correr (será que está mesmo a correr?)
 LOGIN:
 
@@ -71,7 +70,7 @@ LOGIN:
     strcpy(req.cmd, "login");
 
     // first request
-    res = send(req, server_fifo, client_fifo);
+    res = send(req);
     //print_response(res);
 
     if(!res.cmd){
@@ -215,8 +214,8 @@ int validate_cmd(char command[]){
         default:
 
         // player commands
-        for(i=0; i<C; i++)
-            if(strcmp(C_CMDS[i], cmd) == 0)
+        for(i=0; i<P; i++)
+            if(strcmp(P_CMDS[i], cmd) == 0)
                 break;
 
         switch(i){
@@ -230,6 +229,12 @@ int validate_cmd(char command[]){
             case 5://"pass",
             case 6://"help",
             case 7://"giveup"
+                return 0;
+
+            // players (list)
+            case 8:
+                return 1;
+
             default:
                 return 0;
         }
@@ -248,19 +253,33 @@ int scanz(char *buffer){
 // prompts player's name
 void getname(char name[]){//, char *prompt[], char *format[]){
     char buffer[32];
-    int r=0;
+    int i, r=0;
 
     while(!r){
+    BEGIN:
+
         _puts("your name:", 3);
         printf("$ ");
         scanf(" %[^\n]", buffer);
         r = sscanf(buffer, " %s", name);
+        // client commands
+        for(i=0; i<C; i++) if(strcmp(C_CMDS[i], name) == 0) {
+            _printf(4, "the name '%s' is reserved\n", name);
+            r =0;
+            goto BEGIN;
+        }
+        // player commands
+        for(i=0; i<P; i++) if(strcmp(P_CMDS[i], name) == 0){
+            _printf(4, "the name '%s' is reserved\n", name);
+            r=0;
+            goto BEGIN;
+        }
     }
 }
 
 //-----------------------------------------------------------------------------
 // SEND REQUEST
-struct response send(struct request req, int server_fifo, int client_fifo){
+struct response send(struct request req){
     struct response res;
 
     // enviar dados ao servidor
@@ -354,18 +373,30 @@ void print_response(struct response res){
 //-----------------------------------------------------------------------------
 // INIT (start/finish game) SIGALRM handler
 void init(int sig){
+    struct status stat;
+
+    // [5] abrir fifo privado em modo de leitura
+    if((client_fifo = open(req.fifo, O_RDONLY)) < 0){
+        perror(req.fifo);
+        return;
+    }
+
+    // [6] ler dados
+    read(client_fifo, &stat, sizeof(stat));
+    // fechar o fifo do cliente
+    close(client_fifo);
 
     // get game info
 
-   _puts("game started", 3);
-   printf("game info\n$ ");
+   _printf(3, "game '%s' started", stat.name);
+   printf("tiles\n%s\n$ ", stat.tiles);
 }
 
 //-----------------------------------------------------------------------------
 // PLAY (play tile) - SIGUSR1 handler
 void play(int sig){
    
-    // get play hand
+   // get play hand
 
    _puts("\nyour turn to play", 3);
    printf("pick a tile\n$ ");

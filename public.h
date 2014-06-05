@@ -10,7 +10,7 @@
 const char *DOMINOS = "/tmp/DOMINOS";
 
 #define NUMPECAS 7
-#define P 8
+#define P 9
 #define C 12
 
 // comandos do jogador (ao cliente)
@@ -22,7 +22,8 @@ char *P_CMDS[P] = {
     "get",
     "pass",
     "help",
-    "giveup"
+    "giveup",
+    "players"
 };
 
 // comandos do cliente (ao servidor)

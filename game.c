@@ -128,6 +128,8 @@ int add_player(struct player player, struct game *game){
 	}
 
 	strcpy(new_player->name, player.name);
+	strcpy(new_player->fifo, player.fifo);
+	new_player->pid = player.pid;
 	new_player->tiles = NULL;
 
 	game->players = new_player;

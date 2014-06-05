@@ -45,11 +45,33 @@ struct response ni(struct request req);
 struct game *games = NULL;
 struct player *players = NULL;
 
+int client_fifo, server_fifo;
+//-----------------------------------------------------------------------------
+// USERS
+struct response list_players(struct request req){
+    struct response res = resdef(1, "OK players", req);
+    struct player *node = games->players;
+    char msg[512];
+    char line[64];
+
+    msg[0] = '\0';
+    line[0] ='\0';
+
+    while(node != NULL){
+        sprintf(line, "%d %s %d %s (%d)\n",
+            node->id, node->name, node->pid, node->fifo, node->wins);
+        strcat(msg, line);       
+        node = node->prev;
+    }
+    strcpy(res.msg, msg);
+    return res;
+}
+
 //-----------------------------------------------------------------------------
 // M A I N
 //-----------------------------------------------------------------------------
 int main(int argc, char *charv[]){
-    int spid, client_fifo, server_fifo, aux_fifo, tile_id;
+    int spid, aux_fifo, tile_id;
     int i, k, n, A_SIGS[A];
     struct request req;
     struct response res;
@@ -108,7 +130,7 @@ int main(int argc, char *charv[]){
 
             // command router
             switch(i) {
-                
+
                 // login
                 case 0:
                     res = login(req);
@@ -154,6 +176,7 @@ int main(int argc, char *charv[]){
                 for(i=0; i<P; i++)
                     if(strcmp(P_CMDS[i], action) == 0)
                         break;
+                
                 switch (i) {
                     case 1://info
                         res = info(req);
@@ -183,8 +206,14 @@ int main(int argc, char *charv[]){
                         res = help(req);
                         break;
 
-                    case 7://giveup
+                    //giveup
+                    case 7:
                         res = giveup(req);
+                        break;
+                    
+                    // players
+                    case 8:
+                        res = list_players(req);
                         break;
 
                     default:
@@ -248,28 +277,20 @@ struct response status(struct request req){
 // USERS
 struct response users(struct request req){
     struct response res = resdef(1, "OK users", req);
-    struct player *aux = players;
+    struct player *node = players;
     char msg[512];
-    int i, j=0, l;
+    char line[64];
 
-    while(aux != NULL){
-        l = strlen(aux->name);
-        for(i=0; i<l; i++){
-            msg[j++] = aux->name[i];
-            if(j == 511) break;
-        }
-        if(j == 511) break;
+    msg[0] = '\0';
+    line[0] ='\0';
 
-        //TODO
-        //if(player->wins)
-
-        aux = aux->prev;
-
-        if(aux != NULL) msg[j++] = '\n';
+    while(node != NULL){
+        sprintf(line, "%d %s %d %s (%d)\n",
+            node->id, node->name, node->pid, node->fifo, node->wins);
+        strcat(msg, line);       
+        node = node->prev;
     }
-    msg[j] = '\0';
     strcpy(res.msg, msg);
-
     return res;
 }
 
@@ -279,6 +300,12 @@ struct response add_game(struct request req){
     struct response res = resdef(1, "OK new", req);
     char name[32];
     int t, pid;
+    
+    if(games != NULL && !games->done) {
+        strcpy(res.msg, "there's a live game");
+        res.cmd = 0;
+        return res;
+    }
 
     sscanf(req.cmd, "new %s %d", name, &t);
     games = new_game(games);
@@ -335,13 +362,22 @@ struct response play_game(struct request req){
         return res;
     }
 
-    if(validate_game(games)){
-        user = get_player_by_id(req.player_id, players);
-        node.id = user->id;
-        node.pid = user->pid;
-        node.login_t = user->login_t;
-        strcpy(node.name, user->name);
 
+// check if player already exists
+
+
+    if(!games->done){
+        user = get_player_by_id(req.player_id, players);
+        
+        node.id = user->id;
+        
+        node.pid = user->pid;
+        
+        node.login_t = user->login_t;
+        
+        strcpy(node.name, user->name);
+        strcpy(node.fifo, user->fifo);
+        
         add_player(node, games);
     }
     else {
@@ -359,7 +395,9 @@ struct response leaves(struct request req){
     struct response res = resdef(1, "OK bye", req);
 
     // remove player
+
     // add tiles to stock
+
     // inform the player has left
 
     return res;
@@ -372,6 +410,8 @@ struct response login(struct request req){
     struct response res = resdef(1, "OK welcome", req);
 
     aux_player = get_player_by_name(req.name, players);
+
+    //TODO reject user if other user has the same fifo
 
     if(aux_player == NULL){
         players = new_player(req.name, players);
@@ -434,16 +474,43 @@ int count_players(){
 }
 
 //-----------------------------------------------------------------------------
-// INIT (Start Game)
+// INIT (Start Game) SIGALRM handler
 void init(int sig){
     struct player *node = games->players;
+    int player_fifo;
 
+    struct status stat;
+    int done = 0, n = 0;
+
+    strcpy(stat.name, games->name);
+    strcpy(stat.tiles, "[0,0][0,3]");
+    stat.winner = 0;
+    stat.done = 0;
+  
     if(count_players() > 1){
         while(node != NULL){
             kill(node->pid, SIGUSR1);
+            sleep(1);
+
+    //.........................................................................
+    done = 0;
+    n = 0;
+    do {// [3] Abrir FIFO do cliente em modo de escrita
+        if((player_fifo = open(node->fifo, O_WRONLY | O_NDELAY)) == -1){
+          sleep(5);  
+        } 
+        else {// [5] Enviar resposta pelo FIFO do cliente
+            write(player_fifo, &stat, sizeof(stat));
+            close(player_fifo);
+            done = 1;
+        }
+    } while(n++ < 5 && !done);
+    //.........................................................................
+ 
             node = node->prev;
         }
     }
+    else games->done = 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -461,6 +528,7 @@ struct response resdef(int cmd, char msg[], struct request req){
     return res;
 }
 
+//TODO remove
 //-----------------------------------------------------------------------------
 // Validates Game
 int validate_game(struct game *aux_game){
