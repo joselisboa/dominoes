@@ -16,7 +16,7 @@ int getspid();
 int procs();
 int count_players();
 
-int send(int client_fifo, struct response res, struct request req);
+int send(struct response res, struct request req);
 struct response resdef(int cmd, char msg[], struct request req);
 int validate_game(struct game *aux_game);
 
@@ -223,7 +223,7 @@ int main(int argc, char *charv[]){
             }
 
             //[5] Enviar dados pelo FIFO do cliente
-            if(!send(client_fifo, res, req)) {
+            if(!send(res, req)) {
                 perror("Did not access the client fifo\n");
                 exit(1);
             }
@@ -586,7 +586,7 @@ int procs(){
 
 //-----------------------------------------------------------------------------
 // Send
-int send(int client_fifo, struct response res, struct request req){
+int send(struct response res, struct request req){
     int done = 0, n = 0;
 
     do {// [3] Abrir FIFO do cliente em modo de escrita
@@ -594,22 +594,6 @@ int send(int client_fifo, struct response res, struct request req){
         else {// [5] Enviar resposta pelo FIFO do cliente
             write(client_fifo, &res, sizeof(res));
             close(client_fifo);
-            done = 1;
-        }
-    } while(n++ < 5 && !done);
-
-    return done;
-}
-
-//-----------------------------------------------------------------------------
-int send2(struct response res, char client_fifo[]){
-    int client_pipe, done = 0, n = 0;
-
-    do {
-        if((client_pipe = open(client_fifo, O_WRONLY | O_NDELAY)) == -1) sleep(5);
-        else {
-            write(client_pipe, &res, sizeof(res));
-            close(client_pipe);
             done = 1;
         }
     } while(n++ < 5 && !done);
