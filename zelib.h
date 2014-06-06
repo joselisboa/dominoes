@@ -9,16 +9,16 @@
 #define false 0
 
 char _colors[16][10] = {
-    "\033[0;30m",//black
-    "\033[0;34m",//blue2
-    "\033[0;32m",//pale green2
-    "\033[0;36m",//cyan2
-    "\033[0;31m",//red/brown2
-    "\033[0;35m",//mangeta2
-    "\033[0;33m",//pale yellow2
-    "\033[0;37m",//silver
-    "\033[1;30m",//gray
-    "\033[1;34m",//blue
+    "\033[0;30m",//0 black
+    "\033[0;34m",//1 blue2
+    "\033[0;32m",//2 pale green2
+    "\033[0;36m",//3 cyan2
+    "\033[0;31m",//4 red/brown2
+    "\033[0;35m",//5 mangeta2
+    "\033[0;33m",//6 pale yellow2
+    "\033[0;37m",//7 silver
+    "\033[1;30m",//8 gray
+    "\033[1;34m",//9 blue
     "\033[1;32m",//green
     "\033[1;36m",//cyan
     "\033[1;31m",//red

@@ -19,6 +19,13 @@ int validate_cmd(char command[]);
 int cleanup();
 
 int playing = false;
+int is_playing(){
+    if(!playing) {
+        _puts("you are not playing", 4);
+        return -1;
+    }
+    return 1;
+}
 
 //-----------------------------------------------------------------------------
 // M A I N
@@ -172,28 +179,30 @@ int validate_cmd(char command[]){
 
             return 1;
 
+        // play
         case 6://"play",//'play 99 left' or 'play 18 right'
             // client command
             if(k == 1) return 1;
 
             // player command
             if(k != 3) {
-                _printf(4, "'%s' requires two additional paramaters\n", cmd);
+                _printf(4, "'%s' requires additional paramaters\n", cmd);
                 return -1;
             }
-
             if(atoi(param1) > 28 || atoi(param1) < 1){
                 _puts("the first parameter must be a number between 1 and 28", 4);
                 return -1;
             }
-
             if(!(strcmp(param2, "left") == 0)
                     && !(strcmp(param2, "right") == 0)){
                 _puts("the second parameter must be 'left' or 'right'", 4);
                 return -1;
             }
-
-            return 1;
+            if(is_playing() == true) {
+                _puts("wait", 8);
+                return 1;
+            }
+            return -1;
 
         case 7://"quit",
             return 0;
@@ -216,29 +225,27 @@ int validate_cmd(char command[]){
         default:
 
         // player commands
-        for(i=0; i<P; i++)
-            if(strcmp(P_CMDS[i], cmd) == 0)
-                break;
+        for(i=0; i<P; i++) if(strcmp(P_CMDS[i], cmd) == 0) break;
 
         switch(i){
-            case 0://"tiles",
-            case 1://"info",
-            case 2://"game",
-            case 3://"play",
-                // IT NEVER PASSES HERE
+            case 0:// tiles
+            case 1:// info 
+            case 2:// game 
+            case 4:// get
+            case 5:// pass
+            case 7:// giveup
+            case 8:// hint
+                return is_playing();
 
-            case 4://"get",
-            case 5://"pass",
-            case 6://"help",
-            case 7://"giveup"
-                return 0;
+            case 6:// help
+            // player command
+                _puts("type 'hint' for help on choosing a tile", 5);
+                _puts("HELP", 8);
+                return -1;
 
             // players (list)
-            case 8:
-                return 1;
-
-            default:
-                return 0;
+            case 9: return 1;
+            default: return 0;
         }
     }
 
@@ -356,9 +363,9 @@ void play(int sig){
 //-----------------------------------------------------------------------------
 // QUIT closes client (SIGUSR2 handler)
 void quit(int sig){
-    int i=4;
+    int i = 3;
     _puts("\nthe server is shutting down", 3);
-    _puts("client terminating now", 4);
+    _puts("client terminating now", 5);
     fflush(stdout);
     
     while(i > 0){

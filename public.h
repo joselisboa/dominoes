@@ -11,13 +11,13 @@ const char *DOMINOS = "/tmp/DOMINOS";
 
 #define SERVER "./server"
 #define NUMPECAS 7
-#define P 9
+#define P 10
 #define C 12
 
 // comandos do jogador (ao cliente)
 char *P_CMDS[P] = {
     "tiles", "info", "game", "play", "get",
-    "pass", "help", "giveup", "players"};
+    "pass", "help", "giveup", "hint", "players"};
 
 // comandos do cliente (ao servidor)
 char *C_CMDS[C] = {

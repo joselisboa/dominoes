@@ -299,7 +299,7 @@ struct response add_game(struct request req){
     }
 
     sscanf(req.cmd, "new %s %d", name, &t);
-    sprintf(res.msg, "new game '%s' created", name);
+    sprintf(res.msg, "game '%s' created", name);
 
     games = new_game(games);
     strcpy(games->name, name);
