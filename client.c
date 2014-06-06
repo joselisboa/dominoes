@@ -30,7 +30,7 @@ int is_playing(){
 //-----------------------------------------------------------------------------
 // M A I N
 //-----------------------------------------------------------------------------
-int main(int argc, char charv[]){
+int main(int argc, char argv[]){
     int i, k, n, r, player_id;
     char buffer[256], name[32];
 
@@ -39,10 +39,22 @@ int main(int argc, char charv[]){
     signal(SIGUSR2, quit);// "...avisa os outros programas..."
 
 INIT:
-
+    
     // [0] executa o servidor se o seu FIFO não existir
-    if(!getzpid(SERVER)) start(SERVER);
-    else if(access(DOMINOS, F_OK)) restart(SERVER);
+    if(!getzpid(SERVER)) {
+         if(argc > 1 && strcmp(charv[1], "admin") == 0) start(SERVER);
+         else {
+             puts("the server is not running", 8);
+             exit(1);
+         }
+    }
+    else if(access(DOMINOS, F_OK)) {
+         if(argc > 1 && strcmp(charv[1], "admin") == 0) restart(SERVER);
+         else {
+             puts("the server is not running", 8);
+             exit(1);
+         }
+    }
 
     // [1] cria o fifo privado (cliente)
     sprintf(req.fifo, "%s_%d", FIFOPATH, getpid());
