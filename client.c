@@ -238,7 +238,6 @@ int validate_cmd(char command[]){
                 return is_playing();
 
             case 6:// help
-            // player command
                 _puts("type 'hint' for help on choosing a tile", 5);
                 _puts("HELP", 8);
                 return -1;
@@ -363,12 +362,12 @@ void play(int sig){
 //-----------------------------------------------------------------------------
 // QUIT closes client (SIGUSR2 handler)
 void quit(int sig){
-    int i = 3;
+    int i = 4;
     _puts("\nthe server is shutting down", 3);
     _puts("client terminating now", 5);
     fflush(stdout);
     
-    while(i > 0){
+    while(i > 1){
         _printf(3, "%d\n", --i);
         sleep(1);  
     }

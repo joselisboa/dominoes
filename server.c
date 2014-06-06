@@ -39,6 +39,20 @@ struct move move;
 
 int client_fifo, server_fifo;
 
+void tiles_string(char string[], struct domino *tiles){
+    char tile[16];
+
+    string[0] = '\0';
+    tile[0] = '\0';
+
+    if(tiles == NULL) strcpy(string, "[tiles stock is empty]");
+    while(tiles != NULL){
+        sprintf(tile, "%3d:[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
+        strcat(string, tile);
+        tiles = tiles->next;
+    }
+}
+
 //-----------------------------------------------------------------------------
 // M A I N
 //-----------------------------------------------------------------------------
@@ -106,7 +120,7 @@ int main(int argc, char *charv[]){
                 case 5: res = add_game(req);
                     break;
                 // play
-                case 6: res = play_game(req);    
+                case 6: res = (k == 1)? play_game(req) : play_tile(req);
                     break;
                 // quit
                 case 7: res = leaves(req);
@@ -126,9 +140,6 @@ int main(int argc, char *charv[]){
                         break;
                     // game
                     case 2: res = game_tiles(req);
-                        break;
-                    // play
-                    case 3: res = play_tile(req);
                         break;
                     // get
                     case 4: res = get(req);
@@ -402,6 +413,7 @@ struct response login(struct request req){
 // INFO
 struct response info(struct request req){
     struct response res;
+
     res.pid = getpid();
     strcpy(res.msg, "Info");
     res.req = req;
@@ -409,8 +421,18 @@ struct response info(struct request req){
     return res;
 }
 
+//-----------------------------------------------------------------------------
+// TILES
 struct response player_tiles(struct request req){
-     return ni(req);
+    struct response res = resdef(1, "OK tiles", req);
+    struct player *player = get_player_by_name(req.name, games->players);
+    char hand[128];
+
+    sprintf(res.msg, "%s, your dominoes\n", player->name);   
+    tiles_string(hand, player->tiles);
+    strcat(res.msg, hand);
+
+    return res;
 }
 struct response game_tiles(struct request req){
      return ni(req);
