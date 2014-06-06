@@ -47,6 +47,7 @@ struct move {
     int turn; // next player {-1,0,1,2,3} (-1 for game over) 
     int winner; // {-1,0,1,2,3} (-1 for no winner)  
     char players[4][32];// [0,1,2,3]
+    int send;
 };
 
 int send_signal(int pid, int SIG){

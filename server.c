@@ -46,11 +46,63 @@ void tiles_string(char string[], struct domino *tiles){
     tile[0] = '\0';
 
     if(tiles == NULL) strcpy(string, "[]");
-    while(tiles != NULL){
+    else while(tiles != NULL){
         sprintf(tile, "%3d:[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
         strcat(string, tile);
         tiles = tiles->next;
     }
+}
+
+// stringify tiles
+void mosaic_string(char string[]){
+    struct domino *node = games->mosaic;
+    char tile[16];
+
+    string[0] = '\0';
+    tile[0] = '\0';
+
+    if(node == NULL) strcpy(string, "[]");
+    else while(node != NULL){
+        sprintf(tile, "[%d,%d]", node->mask[0], node->mask[1]);
+        strcat(string, tile);
+        node = node->next;
+    }
+}
+
+//-----------------------------------------------------------------------------
+// INFORM
+void inform(){
+    struct player *node, *player = games->players;
+    int player_fifo;
+    int done, k, i=0, n = count_players();
+
+    move.send = 0;
+
+    // enviar dados aos jogadores do jogo
+    player = games->players;
+    while(player != NULL){
+
+        //player = get_player_by_id(i, games->players); 
+        kill(player->pid, SIGUSR1);
+        done = 0;
+        k = 0;
+        do {// abrir FIFO do jogador em modo de escrita
+            if((player_fifo = open(player->fifo, O_WRONLY | O_NDELAY)) == -1){
+              sleep(5);
+            }
+            else {
+                write(player_fifo, &move, sizeof(move));
+                sleep(1);
+                close(player_fifo);
+                sleep(1);
+                done = 1;
+            }
+        } while(k++ < 5 && !done);
+        
+        player = player->prev;
+    }
+
+    return;
 }
 
 //-----------------------------------------------------------------------------
@@ -85,91 +137,92 @@ int main(int argc, char *charv[]){
     // [1] Gerar FIFO público, e aguardar dados do cliente
     mkfifo(DOMINOS, 0666);
 
-    // fifo cicle
-    while(1) {
-        // [3] Abrir FIFO do cliente em modo de escrita
-        if((server_fifo = open(DOMINOS, O_RDONLY)) < 0) {
-            perror("BROKE UP");
-            break;
-        }
-
-        // [2] Ler pedido pelo FIFO público
-        while(read(server_fifo, &req, sizeof(req)) > 0){
-            // [4] Satisfazer pedido do cliente
-            k = sscanf(req.cmd, "%s %d %s", action, &tile_id, side);
-
-            // Client commands
-            for(i=0; i<C; i++) if(strcmp(C_CMDS[i], action) == 0) break;
-            switch(i) {
-                // login
-                case 0: res = login(req);
-                    break;
-                // exit
-                case 1: res = leaves(req);
-                    break;
-                // logout
-                case 2: res = logout(req);
-                    break;
-                // status
-                case 3: res = status(req);
-                    break;
-                // users
-                case 4: res = users(req);
-                    break;
-                // new
-                case 5: res = add_game(req);
-                    break;
-                // play
-                case 6: res = (k == 1)? play_game(req) : play_tile(req);
-                    break;
-                // quit
-                case 7: res = leaves(req);
-                    break;
-                // games
-                case 11: res = list_games(req);
-                    break;
-                default:
-                // Players commands
-                for(i=0; i<P; i++) if(strcmp(P_CMDS[i], action) == 0) break;
-                switch (i) {
-                    //info
-                    case 1: res = info(req);
-                        break;
-                    // tiles
-                    case 0:res = player_tiles(req);
-                        break;
-                    // game
-                    case 2: res = game_tiles(req);
-                        break;
-                    // get
-                    case 4: res = get(req);
-                        break;
-                    // pass
-                    case 5: res = pass(req);
-                        break;
-                    //help
-                    case 6: res = help(req);
-                        break;
-                    //giveup
-                    case 7: res = giveup(req);
-                        break;
-                    // players
-                    case 9: res = list_players(req);
-                        break;
-                    default: res = ni(req);
-                        res.cmd = 0;
-                }
-            }
-
-            //[5] Enviar dados pelo FIFO do cliente
-            if(res.cmd != -1) if(!send(res, req)) {
-                perror("Did not access the client fifo\n");
-                exit(1);
-            }
-        }
-        
-        close(server_fifo);
+    // [3] Abrir FIFO do cliente em modo de escrita
+    if((server_fifo = open(DOMINOS, O_RDONLY)) < 0) {
+        perror("BROKE UP");
+        exit(1);
     }
+
+    // [2] Ler pedido pelo FIFO público
+    while(read(server_fifo, &req, sizeof(req)) > 0){
+        // [4] Satisfazer pedido do cliente
+        k = sscanf(req.cmd, "%s %d %s", action, &tile_id, side);
+
+        // Client commands
+        for(i=0; i<C; i++) if(strcmp(C_CMDS[i], action) == 0) break;
+        switch(i) {
+            // login
+            case 0: res = login(req);
+                break;
+            // exit
+            case 1: res = leaves(req);
+                break;
+            // logout
+            case 2: res = logout(req);
+                break;
+            // status
+            case 3: res = status(req);
+                break;
+            // users
+            case 4: res = users(req);
+                break;
+            // new
+            case 5: res = add_game(req);
+                break;
+            // play
+            case 6: res = (k == 1)? play_game(req) : play_tile(req);
+                break;
+            // quit
+            case 7: res = leaves(req);
+                break;
+            // games
+            case 11: res = list_games(req);
+                break;
+            default:
+            // Players commands
+            for(i=0; i<P; i++) if(strcmp(P_CMDS[i], action) == 0) break;
+            switch (i) {
+                //info
+                case 1: res = info(req);
+                    break;
+                // tiles
+                case 0:res = player_tiles(req);
+                    break;
+                // game
+                case 2: res = game_tiles(req);
+                    break;
+                // get
+                case 4: res = get(req);
+                    break;
+                // pass
+                case 5: res = pass(req);
+                    break;
+                //help
+                case 6: res = help(req);
+                    break;
+                //giveup
+                case 7: res = giveup(req);
+                    break;
+                // players
+                case 9: res = list_players(req);
+                    break;
+                default: res = ni(req);
+                    res.cmd = 0;
+            }
+        }
+
+        //[5] Enviar dados pelo FIFO do cliente
+        if(!send(res, req)) {
+            perror("Did not access the client fifo\n");
+            exit(1);
+        }
+
+        //DEV
+        if(move.send == 1) inform();      
+    }
+
+    close(server_fifo);
+
     return cleanup();
 }
 
@@ -471,7 +524,7 @@ struct response game_tiles(struct request req){
     char hand[128];
 
     sprintf(res.msg, "mosaic in %s\n", node->name);   
-    tiles_string(hand, node->mosaic);
+    mosaic_string(hand);
     strcat(res.msg, hand);
 
     return res;
@@ -521,51 +574,47 @@ struct response play_tile(struct request req){
         for(i=0; i<n; i++) if(strcmp(playing->name, move.players[i]) == 0){
 
             j = (i+1 == n) ? 0 : i + 1;
-            next = get_player_by_name(move.players[j], games->players);
+            playing = get_player_by_name(move.players[j], games->players);
             move.turn = j;
 
             break;
         }
 
         move.move++;
+        move.send = 1;
 
         // move message
-        sprintf(move.msg, "%s played tile %d:[%d,%d]\n", 
-            player->name, tile->id, tile->mask[0], tile->mask[0]);
+        sprintf(move.msg, "\n%s played tile %d:[%d,%d]", 
+            player->name, tile->id, tile->mask[0], tile->mask[1]);
 
         // player's last tile? won
         if(!count_tiles(player->tiles)) {
             player->wins++;
 
-            sprintf(string, "it was %s's last tile\n", player->name);
+            sprintf(string, "\nit was %s's last tile", player->name);
             strcat(move.msg, string);
             
-            sprintf(string, "%s is the Winner!\n", player->name);
+            sprintf(string, "\n%s is the Winner!", player->name);
             strcat(move.msg, string);
 
             move.winner = i-1;
             games->done = 1;
         }
         else {
-            sprintf(string, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play\n", next->name);
+            sprintf(string, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play", playing->name);
             strcat(move.msg, string);
         }
-        
-        playing = next;
 
-        //TODO inform players
-        //inform(msg);// like init
-        
+        //TODO inform players  
         //TODO left/right side
-
-        if(0) res.cmd = -1;
+        //TODO move to move
         //TODO remove after inform implant
-        else sprintf(res.msg, "OK tile %d on the %s side of the mosaic", tile_id, pos);
+        sprintf(res.msg, "placed tile %d on the %s side of the mosaic", tile_id, pos);
     }
     //5. tile does NOT fit mosaic    
     else{
         strcpy(res.msg, "tile does not fit");
-        res.cmd = 0;    
+        res.cmd = 0;
     }
 
     return res;
@@ -720,6 +769,8 @@ int send(struct response res, struct request req){
             done = 1;
         }
     } while(n++ < 5 && !done);
+
+    res.msg[0] = '\0';
 
     return done;
 }
