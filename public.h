@@ -30,7 +30,7 @@ struct request {
 	int player_id;
     char name[32];
 	char fifo[32];
-	char cmd[16];
+	char cmd[64];
 };
 
 struct response {
