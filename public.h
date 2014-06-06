@@ -41,6 +41,7 @@ struct response {
 };
 
 struct move {
+    int move;// {1,2,3,...} 
     char name[32];// name of the game
     char msg[256];// server message
     int turn; // next player {-1,0,1,2,3} (-1 for game over) 

@@ -35,6 +35,8 @@ struct response resdef(int cmd, char msg[], struct request req);
 struct game *games = NULL;
 struct player *players = NULL;
 struct player *playing = NULL;
+struct move move;
+
 int client_fifo, server_fifo;
 
 //-----------------------------------------------------------------------------
@@ -442,32 +444,31 @@ int count_players(){
 }
 
 //-----------------------------------------------------------------------------
-// INIT (Start Game) SIGALRM handler
+// INIT (start game) SIGALRM handler
 void init(int sig){
     struct player *node, *player = games->players;;
     int player_fifo;
-    struct move status;
     int done, k, i=0, n = count_players();
     char hand[128], tile[16];
     struct domino *tiles;
 
-  
     if(count_players() > 1){        
         // start game (distribute dominoes)
         start(games);
         time(&games->start_t);
         
         // menssagem
-        strcpy(status.name, games->name);
-        status.winner = 0;
+        strcpy(move.name, games->name);
+        move.winner = 0;
+        move.move = 1;
         
         player = games->players;
         while(player != NULL){
-            strcpy(status.players[i++], player->name);
+            strcpy(move.players[i++], player->name);
             if(player->prev == NULL) playing = player;
             player = player->prev;
         }
-        for(i; i<4; i++) status.players[i][0] = '\0';
+        for(i; i<4; i++) move.players[i][0] = '\0';
 
         // enviar dados aos jogadores do jogo
         player = games->players;
@@ -482,29 +483,29 @@ void init(int sig){
                   sleep(5);
                 }
                 else {
-                    status.msg[0] = '\0';
+                    move.msg[0] = '\0';
                     tile[0] = '\0';
 
-                    strcpy(status.msg, "Starting ");
-                    strcat(status.msg, games->name);                    
+                    strcpy(move.msg, "Starting ");
+                    strcat(move.msg, games->name);                    
                     
                     //sprintf(hand, "\n\033[0;32m%s, your dominoes\n 1:[0,0]\n23:[3,1]\033[0m\n", player->name);
                     sprintf(hand, "\n\033[0;32m%s, your dominoes\n", player->name);
-                    strcat(status.msg, hand);
+                    strcat(move.msg, hand);
                     
                     tiles = player->tiles;
                     while(tiles != NULL){
                         sprintf(tile, "%3d:[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
-                        strcat(status.msg, tile);
+                        strcat(move.msg, tile);
                         tiles = tiles->next;
                     }
 
                     //"\033[0;35m",//mangeta2
-                    status.turn = 1;
+                    move.turn = 1;
                     sprintf(hand, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play", playing->name);
-                    strcat(status.msg, hand);  
+                    strcat(move.msg, hand);  
                     // enviar resposta pelo FIFO do jogador
-                    write(player_fifo, &status, sizeof(status));
+                    write(player_fifo, &move, sizeof(move));
                     close(player_fifo);
                     sleep(1);
                     done = 1;

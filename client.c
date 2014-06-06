@@ -18,6 +18,8 @@ void start(char proc[]);
 int validate_cmd(char command[]);
 int cleanup();
 
+int playing = false;
+
 //-----------------------------------------------------------------------------
 // M A I N
 //-----------------------------------------------------------------------------
@@ -325,8 +327,6 @@ void start(char proc[]){
     sleep(1);
 }
 
-
-
 //-----------------------------------------------------------------------------
 // PLAY (game play) SIGUSR1 handler
 void play(int sig){
@@ -345,6 +345,8 @@ void play(int sig){
     close(client_fifo);
 
     // get game info
+    if(status.move == 1) playing = true;
+    else if(status.turn == -1) playing = false;
 
     puts(status.msg);
     printf("> ");
