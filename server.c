@@ -162,11 +162,12 @@ int main(int argc, char *charv[]){
             }
 
             //[5] Enviar dados pelo FIFO do cliente
-            if(!send(res, req)) {
+            if(res.cmd != -1) if(!send(res, req)) {
                 perror("Did not access the client fifo\n");
                 exit(1);
             }
         }
+        
         close(server_fifo);
     }
     return cleanup();
@@ -476,9 +477,100 @@ struct response game_tiles(struct request req){
     return res;
 }
 
+//-----------------------------------------------------------------------------
+// PLAY places tile on mosaic
 struct response play_tile(struct request req){
-     return ni(req);
+    struct response res = resdef(1, req.cmd, req);
+    struct player *player = NULL, *next = NULL;
+    struct domino *tile = NULL;
+    int tile_id, mask[2], n, i, j;
+    char pos[8], string[64];
+
+    string[0] = '\0';
+
+    sscanf(req.cmd, "play %d %s", &tile_id, pos);
+
+    player = get_player_by_name(req.name, games->players);
+    
+    //1. player == NULL => player is not playing the game
+    if(player != playing){
+        strcpy(res.msg, "its not your turn");
+        res.cmd = 0;
+        return res;
+    }
+
+    tile = get_tile_by_id(tile_id, player->tiles);
+    //2. tile == NULL => player does not have that tile
+    if(tile == NULL){
+        sprintf(res.msg, "you don't have tile %d", tile_id);
+        res.cmd = 0;
+        return res;
+    }
+    
+    get_ends(mask, games->mosaic);
+    //3. mosaic is empty
+    if(count_tiles(games->mosaic) == 0 || validate_tile(mask, tile)){
+        // remove a peça ao jogador
+        tile = remove_tile(tile_id, player);
+        
+        // coloca a peça no mosaico
+        place_tile(tile, games);
+
+        // next player
+        n = count_players();
+        for(i=0; i<n; i++) if(strcmp(playing->name, move.players[i]) == 0){
+
+            j = (i+1 == n) ? 0 : i + 1;
+            next = get_player_by_name(move.players[j], games->players);
+            move.turn = j;
+
+            break;
+        }
+
+        move.move++;
+
+        // move message
+        sprintf(move.msg, "%s played tile %d:[%d,%d]\n", 
+            player->name, tile->id, tile->mask[0], tile->mask[0]);
+
+        // player's last tile? won
+        if(!count_tiles(player->tiles)) {
+            player->wins++;
+
+            sprintf(string, "it was %s's last tile\n", player->name);
+            strcat(move.msg, string);
+            
+            sprintf(string, "%s is the Winner!\n", player->name);
+            strcat(move.msg, string);
+
+            move.winner = i-1;
+            games->done = 1;
+        }
+        else {
+            sprintf(string, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play\n", next->name);
+            strcat(move.msg, string);
+        }
+        
+        playing = next;
+
+        //TODO inform players
+        //inform(msg);// like init
+        
+        //TODO left/right side
+
+        if(0) res.cmd = -1;
+        //TODO remove after inform implant
+        else sprintf(res.msg, "OK tile %d on the %s side of the mosaic", tile_id, pos);
+    }
+    //5. tile does NOT fit mosaic    
+    else{
+        strcpy(res.msg, "tile does not fit");
+        res.cmd = 0;    
+    }
+
+    return res;
 }
+
 struct response get(struct request req){
      return ni(req);
 }
