@@ -154,7 +154,7 @@ int main(int argc, char *charv[]){
                     case 7: res = giveup(req);
                         break;
                     // players
-                    case 8: res = list_players(req);
+                    case 9: res = list_players(req);
                         break;
                     default: res = ni(req);
                         res.cmd = 0;
@@ -514,15 +514,11 @@ void init(int sig){
                     //sprintf(hand, "\n\033[0;32m%s, your dominoes\n 1:[0,0]\n23:[3,1]\033[0m\n", player->name);
                     sprintf(hand, "\n\033[0;32m%s, your dominoes\n", player->name);
                     strcat(move.msg, hand);
-                    
-                    tiles = player->tiles;
-                    while(tiles != NULL){
-                        sprintf(tile, "%3d:[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
-                        strcat(move.msg, tile);
-                        tiles = tiles->next;
-                    }
 
-                    //"\033[0;35m",//mangeta2
+                    hand[0] = '\0';
+                    tiles_string(hand, player->tiles);
+                    strcat(move.msg, hand);  
+
                     move.turn = 1;
                     sprintf(hand, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play", playing->name);
                     strcat(move.msg, hand);  
