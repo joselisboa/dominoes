@@ -59,14 +59,15 @@ INIT:
     }
     
 // Jogador já tem FIFO e o servidor a correr (será que está mesmo a correr?)
+    printf("\e[H\e[2J");   
+
 LOGIN:
 
     //CLEAR DATA FROM PREV LOGIN
     res.msg[0] = '\0';
     res.cmd = 0;
-    req.player_id = 0;
-    
-    printf("\e[H\e[2J");
+    req.player_id = 0;    
+
     //printf("\33[H\33[2J");
     puts("DOMINOES");
     
