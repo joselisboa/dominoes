@@ -49,6 +49,7 @@ struct filename _file(char filename[]){
 }
 
 void _puts(char *format, int k);
+
 // like PHP function die
 void die(char *msg,...){
     va_list args;
@@ -57,90 +58,10 @@ void die(char *msg,...){
 	exit(0);
 }
 
-void _linha(char c){
-	int i;
-	char s[81];
-	for(i=0; i<80; i++) s[i] = c;
-	s[i] = '\0';
-	printf("%s\n", s);
-}
-
-// backup text file
-int _backup(char *filename){
-	FILE *file, *backup;
-	char c;
-
-	if((file = fopen(filename, "r")) == NULL) return FALSE;
-	strcat(filename, ".bak");
-	if((backup = fopen(filename, "w")) == NULL) return FALSE;
-
-	while((c = fgetc(file)) != EOF) fputc(c, backup);
-
-	fclose(file);
-	fclose(backup);
-
-	return TRUE;
-}
-
-void _rename(char *filename, char *afix){
-	struct filename file;
-
-	file = _file(filename);
-
-	strcpy(filename, file.name);
-	strcat(filename, afix);
-	strcat(filename, ".");
-	strcat(filename, file.extension);
-}
-
-int copy_textfile(char *filename, char *copy){
-	FILE *input, *output;
-	char c;
-	int i;
-
-	if((input = fopen(filename, "r")) == NULL) return FALSE;
-	if((output = fopen(copy, "w")) == NULL) return FALSE;
-
-//fprintf(output, "%3d ", ++i);// %d na primeira linha
-
-	while((c = fgetc(input)) != EOF) {
-			fputc(c, output);
-//if(c == '\n' || c == '\r') fprintf(output, "%3d ", ++i);
-	}
-
-	fclose(output);
-	fclose(input);
-
-	return TRUE;
-}
-
-void _entrelinhas(char c, char *format, ...){
-	va_list args;
-
-	//HANDLE  hConsole;
-  	//hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    //SetConsoleTextAttribute(hConsole, 8);
-	_linha(c);
-	//SetConsoleTextAttribute(hConsole, 15);
-
-	va_start(args, format);
-	vprintf(format, args);
-	va_end(args);
-
-	//SetConsoleTextAttribute(hConsole, 8);
-	_linha(c);
-    //SetConsoleTextAttribute(hConsole, 7);
-}
-
 void _puts(char *format, int k){
-
     if(k>15 || k <0) k = 7;
-
     printf("%s", _colors[k]);
-
     puts(format);
-
     printf("\033[0m");
 }
 
@@ -148,12 +69,9 @@ void _printf(int k, char *format, ...){
 	va_list args;
 
     if(k>15 || k<0) k = 7;
-
     printf("%s",_colors[k]);
-
     va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
-
     printf("\033[0m");
 }

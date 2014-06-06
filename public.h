@@ -15,32 +15,14 @@ const char *DOMINOS = "/tmp/DOMINOS";
 
 // comandos do jogador (ao cliente)
 char *P_CMDS[P] = {
-    "tiles",
-    "info",
-    "game",
-    "play",//'play 99 left' or 'play 18 right'
-    "get",
-    "pass",
-    "help",
-    "giveup",
-    "players"
-};
+    "tiles", "info", "game", "play", "get",
+    "pass", "help", "giveup", "players"};
 
 // comandos do cliente (ao servidor)
 char *C_CMDS[C] = {
-    "login",
-    "exit",
-    "logout",
-    "status",
-    "users",
-    "new",// new <nome> <s>
-    "play",
-    "quit",
-    "start",
-    "shutdown",
-    "restart",
-    "games"
-};
+    "login", "exit", "logout", "status", "users",
+    "new", "play", "quit", "start", "shutdown",
+    "restart", "games"};
 
 struct request {
 	int pid;

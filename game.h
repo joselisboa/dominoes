@@ -25,7 +25,6 @@ struct game {
 	struct domino *mosaic;// mosaico
 	struct player *winner;// vencedor
 	struct player *players;// jogadores
-	//struct playing;
 	int done;
 	struct game *next;// proximo jogo
 	struct game *prev;// jogo anterior

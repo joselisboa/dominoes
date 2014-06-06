@@ -2,12 +2,6 @@
 #include "public.h"
 #define A 2
 
-//stock, tiles, start, new_game,
-//add_player, get_player_by_id, get_tile_by_id, count_tiles
-//add_tile, remove_tile, give_tile_by_id, place_tile,
-//get_ends (mosaic_ends), validate_tile, tile_exists (has_tile),
-//player_status, get_winner
-
 void init(int sig);
 void stop(int sig);
 void show(int sig);
@@ -16,8 +10,8 @@ int getspid();
 int procs();
 int count_players();
 int send(struct response res, struct request req);
-struct response resdef(int cmd, char msg[], struct request req);
-struct response leave(struct request req);// same as leave?
+
+struct response leave(struct request req);
 struct response logout(struct request req);
 struct response status(struct request req);
 struct response users(struct request req);
@@ -34,9 +28,10 @@ struct response game_tiles(struct request req);
 struct response play_game(struct request req);
 struct response get(struct request req);
 struct response pass(struct request req);
-struct response ni(struct request req);
 struct response help(struct request req);
 struct response giveup(struct request req);
+struct response ni(struct request req);
+struct response resdef(int cmd, char msg[], struct request req);
 
 struct game *games = NULL;
 struct player *players = NULL;
@@ -47,17 +42,13 @@ int client_fifo, server_fifo;
 // M A I N
 //-----------------------------------------------------------------------------
 int main(int argc, char *charv[]){
-    int spid, aux_fifo, tile_id;
-    int i, k, n, A_SIGS[A];
+    int spid, aux_fifo, tile_id, i, k, n, A_SIGS[A];
     struct request req;
     struct response res;
     char action[8], side[8];
 
     // administrator commands
-    char *A_CMDS[A] = {
-        "show",
-        "close"
-    };
+    char *A_CMDS[A] = {"show", "close"};
 
     // administrator signals
     A_SIGS[0] = SIGUSR1;//show
@@ -95,106 +86,72 @@ int main(int argc, char *charv[]){
 
         // [2] Ler pedido pelo FIFO público
         while(read(server_fifo, &req, sizeof(req)) > 0){
-
             // [4] Satisfazer pedido do cliente
             k = sscanf(req.cmd, "%s %d %s", action, &tile_id, side);
 
             // Client commands
-            for(i=0; i<C; i++)
-                if(strcmp(C_CMDS[i], action) == 0)
-                    break;
-
-            // command router
+            for(i=0; i<C; i++) if(strcmp(C_CMDS[i], action) == 0) break;
             switch(i) {
-
                 // login
-                case 0:
-                    res = login(req);
+                case 0: res = login(req);
                     break;
-
                 // exit
-                case 1:
-                    res = leaves(req);
-
+                case 1: res = leaves(req);
                     break;
-
-                case 2://logout
-                    res = logout(req);
+                // logout
+                case 2: res = logout(req);
                     break;
-
-                case 3://status
-                    res = status(req);
+                // status
+                case 3: res = status(req);
                     break;
-
-                case 4://users
-                    res = users(req);
+                // users
+                case 4: res = users(req);
                     break;
-
-                case 5://new
-                    res = add_game(req);
+                // new
+                case 5: res = add_game(req);
                     break;
-
-                case 6://play
-                    res = play_game(req);
+                // play
+                case 6: res = play_game(req);    
                     break;
-
-                case 7://quit
-                    res = leaves(req);
+                // quit
+                case 7: res = leaves(req);
                     break;
-
-                case 11://games
-                    res = list_games(req);
+                // games
+                case 11: res = list_games(req);
                     break;
-
                 default:
-
                 // Players commands
-                for(i=0; i<P; i++)
-                    if(strcmp(P_CMDS[i], action) == 0)
-                        break;
-                
+                for(i=0; i<P; i++) if(strcmp(P_CMDS[i], action) == 0) break;
                 switch (i) {
-                    case 1://info
-                        res = info(req);
+                    //info
+                    case 1: res = info(req);
                         break;
-
-                    case 0://tiles
-                        res = player_tiles(req);
+                    // tiles
+                    case 0:res = player_tiles(req);
                         break;
-
-                    case 2://game
-                        res = game_tiles(req);
+                    // game
+                    case 2: res = game_tiles(req);
                         break;
-
-                    case 3://play
-                        res = play_tile(req);
+                    // play
+                    case 3: res = play_tile(req);
                         break;
-
-                    case 4://get
-                        res = get(req);
+                    // get
+                    case 4: res = get(req);
                         break;
-
-                    case 5://pass
-                        res = pass(req);
+                    // pass
+                    case 5: res = pass(req);
                         break;
-
-                    case 6://help
-                        res = help(req);
+                    //help
+                    case 6: res = help(req);
                         break;
-
                     //giveup
-                    case 7:
-                        res = giveup(req);
+                    case 7: res = giveup(req);
                         break;
-                    
                     // players
-                    case 8:
-                        res = list_players(req);
+                    case 8: res = list_players(req);
                         break;
-
-                    default:
-                        // not implemented
-                        res = ni(req);//continue;
+                    default: res = ni(req);
+                        res.cmd = 0;
                 }
             }
 
@@ -204,10 +161,8 @@ int main(int argc, char *charv[]){
                 exit(1);
             }
         }
-
         close(server_fifo);
     }
-
     return cleanup();
 }
 
