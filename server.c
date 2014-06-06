@@ -298,7 +298,7 @@ struct response list_players(struct request req){
 // NEW (Add Game)
 struct response add_game(struct request req){
     struct response res = resdef(1, "OK new", req);
-    char name[16];
+    char name[32];
     int t, pid;
 
     name[0] = '\0';
