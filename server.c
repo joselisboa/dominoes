@@ -54,6 +54,7 @@ int main(int argc, char *charv[]){
         spid = getzpid(SERVER);
         if(strcmp("show", charv[1]) == 0) kill(spid, SIGUSR1);
         else if(strcmp("close", charv[1]) == 0) kill(spid, SIGUSR2);
+        sleep(1);
         exit(0);
     }
 
@@ -174,7 +175,9 @@ void stop(int sig){
 }
 
 void show(int sig){
-    printf("\nSHOW NOT IMPLEMENTED YET\n$ ");
+    printf("\nnot implemented yet");
+    printf("\npress enter to continue\n");
+    fflush(stdout);
 }
 
 //-----------------------------------------------------------------------------
@@ -282,8 +285,10 @@ struct response list_players(struct request req){
 // NEW (Add Game)
 struct response add_game(struct request req){
     struct response res = resdef(1, "OK new", req);
-    char name[32];
+    char name[16];
     int t, pid;
+
+    name[0] = '\0';
 
     if(games != NULL && !games->done) {
         strcpy(res.msg, "there's a live game");
@@ -313,14 +318,16 @@ struct response play_game(struct request req){
     struct response res = resdef(1, "OK play", req);
     struct player node, *user = NULL, *player = NULL;
     char msg[512];
-    int i, n = count_players();
+    int i, n;
 
     // there are no games
     if(games == NULL){
         strcpy(res.msg, "create a game first");
-        res.cmd = 2;
+        res.cmd = 0;
         return res;
     }
+    
+    n = count_players();
 
     // player already subscribed?
     player = get_player_by_name(req.name, games->players);
@@ -441,9 +448,15 @@ void init(int sig){
     int player_fifo;
     struct move status;
     int done, k, i=0, n = count_players();
-    char hand[128];
+    char hand[128], tile[16];
+    struct domino *tiles;
+
   
     if(count_players() > 1){        
+        // start game (distribute dominoes)
+        start(games);
+        time(&games->start_t);
+        
         // menssagem
         strcpy(status.name, games->name);
         status.winner = 0;
@@ -470,13 +483,25 @@ void init(int sig){
                 }
                 else {
                     status.msg[0] = '\0';
-                    strcpy(status.msg, "\nStarting Game ");
+                    tile[0] = '\0';
+
+                    strcpy(status.msg, "Starting ");
                     strcat(status.msg, games->name);                    
-                    sprintf(hand, "\n\033[0;32m%s, your dominoes\n 1:[0,0]\n23:[3,1]\033[0m\n", player->name);                                     
+                    
+                    //sprintf(hand, "\n\033[0;32m%s, your dominoes\n 1:[0,0]\n23:[3,1]\033[0m\n", player->name);
+                    sprintf(hand, "\n\033[0;32m%s, your dominoes\n", player->name);
                     strcat(status.msg, hand);
+                    
+                    tiles = player->tiles;
+                    while(tiles != NULL){
+                        sprintf(tile, "%3d:[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
+                        strcat(status.msg, tile);
+                        tiles = tiles->next;
+                    }
+
                     //"\033[0;35m",//mangeta2
                     status.turn = 1;
-                    sprintf(hand, "\nwaiting for \033[0;35m%s\033[0m to play", playing->name);
+                    sprintf(hand, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play", playing->name);
                     strcat(status.msg, hand);  
                     // enviar resposta pelo FIFO do jogador
                     write(player_fifo, &status, sizeof(status));
@@ -485,8 +510,9 @@ void init(int sig){
                     done = 1;
                 }
             } while(k++ < 5 && !done);
+            
+            player = player->prev;
         }
-        player = player->prev;
     }
     else games->done = 1;
 }

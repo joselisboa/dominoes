@@ -57,6 +57,10 @@ LOGIN:
     res.cmd = 0;
     req.player_id = 0;
     
+    printf("\e[H\e[2J");
+    //printf("\33[H\33[2J");
+    puts("DOMINOES");
+    
     // get player's name
     getname(req.name);//, " your name: ", " %[a-ZA-Z0-9_]");
 
@@ -81,7 +85,7 @@ LOGIN:
     while(1){
 
         // [3] player input
-        printf("$ ");
+        printf("> ");
         scanf(" %[^\n]", req.cmd);
 
         // PARSE CMD (16 bytes) HERE
@@ -129,7 +133,7 @@ LOGIN:
 //-----------------------------------------------------------------------------
 // validates command
 int validate_cmd(char command[]){
-    char cmd[8], param1[16], param2[16];
+    char cmd[8], param1[32], param2[16];
     int i, k;
 
     // scan user commands
@@ -245,18 +249,22 @@ void getname(char name[]){//, char *prompt[], char *format[]){
     char buffer[32];
     int i, r = 0;
 
+    fflush(stdout);
+
     while(!r){
     BEGIN:
         _puts("your name:", 3);
-        printf("$ ");
+        printf("> ");
         scanf(" %[^\n]", buffer);
         r = sscanf(buffer, " %s", name);
+        
         // client commands
         for(i=0; i<C; i++) if(strcmp(C_CMDS[i], name) == 0) {
             _printf(4, "the name '%s' is reserved\n", name);
             r =0;
             goto BEGIN;
         }
+
         // player commands
         for(i=0; i<P; i++) if(strcmp(P_CMDS[i], name) == 0){
             _printf(4, "the name '%s' is reserved\n", name);
@@ -339,7 +347,7 @@ void play(int sig){
     // get game info
 
     puts(status.msg);
-    printf("$ ");
+    printf("> ");
     fflush(stdout);
 }
 
@@ -348,7 +356,7 @@ void play(int sig){
 void quit(int sig){
     int i=4;
     _puts("\nthe server is shutting down", 3);
-    _puts("shutting down client now", 4);
+    _puts("client terminating now", 4);
     fflush(stdout);
     
     while(i > 0){
