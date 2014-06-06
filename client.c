@@ -30,7 +30,7 @@ int is_playing(){
 //-----------------------------------------------------------------------------
 // M A I N
 //-----------------------------------------------------------------------------
-int main(int argc, char argv[]){
+int main(int argc, char *argv[]){
     int i, k, n, r, player_id;
     char buffer[256], name[32];
 
@@ -42,16 +42,16 @@ INIT:
     
     // [0] executa o servidor se o seu FIFO não existir
     if(!getzpid(SERVER)) {
-         if(argc > 1 && strcmp(charv[1], "admin") == 0) start(SERVER);
+         if(argc > 1 && strcmp(argv[1], "admin") == 0) start(SERVER);
          else {
-             puts("the server is not running", 8);
+             puts("the server is not running");
              exit(1);
          }
     }
     else if(access(DOMINOS, F_OK)) {
-         if(argc > 1 && strcmp(charv[1], "admin") == 0) restart(SERVER);
+         if(argc > 1 && strcmp(argv[1], "admin") == 0) restart(SERVER);
          else {
-             puts("the server is not running", 8);
+             puts("the server is not running");
              exit(1);
          }
     }
