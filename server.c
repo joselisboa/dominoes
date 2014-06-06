@@ -345,26 +345,33 @@ struct response play_game(struct request req){
     // player already subscribed?
     player = get_player_by_name(req.name, games->players);
     if(player != NULL){
-        sprintf(res.msg, "you already subscribed to '%s'", games->name);
+        if(games->start_t) strcpy(res.msg, "you are already playing");
+        else sprintf(res.msg, "you already subscribed to '%s'", games->name);
         res.cmd = 0;
         return res;
     }
-    else sprintf(res.msg, "subscribed to '%s'", games->name);
-
-    // open game
-    if(!games->done){
-        user = get_player_by_id(req.player_id, players);
-        node.id = user->id;
-        node.pid = user->pid;
-        node.login_t = user->login_t;
-        strcpy(node.name, user->name);
-        strcpy(node.fifo, user->fifo);
-        add_player(node, games);
+    // available game
+    else if(!games->done){
+        sprintf(res.msg, "subscribed to '%s'", games->name);
+        if(games->start_t == 0) {
+            user = get_player_by_id(req.player_id, players);
+            node.id = user->id;
+            node.pid = user->pid;
+            node.login_t = user->login_t;
+            strcpy(node.name, user->name);
+            strcpy(node.fifo, user->fifo);
+            add_player(node, games);
+        }
+        else {
+            sprintf(msg,"game '%s' already started", games->name);
+            strcpy(res.msg, msg);
+            res.cmd = 0;
+        }
     }
     else {
         sprintf(msg,"'%s' expired", games->name);
         strcpy(res.msg, msg);
-        res.cmd = 2;
+        res.cmd = 0;
     }
 
     return res;
@@ -411,18 +418,38 @@ struct response login(struct request req){
 
 //-----------------------------------------------------------------------------
 // INFO
+// game: Game
+// stock: 5 tiles
+// mosaic: 6 tiles
+// john: 3 tiles (playing)
+// Ana: 6 tiles  
 struct response info(struct request req){
-    struct response res;
+    struct response res = resdef(1, "OK tiles", req);
+    struct player *node = games->players;
+    char string[128];
+    string[0] = '\0';
 
-    res.pid = getpid();
-    strcpy(res.msg, "Info");
-    res.req = req;
-    res.cmd = 0;
+    sprintf(res.msg, "Game: %s\n", games->name);
+    sprintf(string, "Stock: %d tiles\n", count_tiles(games->tiles));
+    strcat(res.msg, string);
+    sprintf(string, "Mosaic: %d tiles\n", count_tiles(games->mosaic));
+    strcat(res.msg, string);
+    
+    while(node != NULL){        
+        if(playing == node) sprintf(string, "%s: %d tiles (playing turn)\n", 
+            node->name, count_tiles(node->tiles)); 
+        else sprintf(string, "%s: %d tiles\n", 
+            node->name, count_tiles(node->tiles)); 
+        strcat(res.msg, string);
+
+        node = (*node).prev;
+    }
+
     return res;
 }
 
 //-----------------------------------------------------------------------------
-// TILES
+// TILES response with player tiles
 struct response player_tiles(struct request req){
     struct response res = resdef(1, "OK tiles", req);
     struct player *player = get_player_by_name(req.name, games->players);
@@ -435,6 +462,8 @@ struct response player_tiles(struct request req){
     return res;
 }
 
+//-----------------------------------------------------------------------------
+// GAME response with mosaic tiles
 struct response game_tiles(struct request req){
     struct response res = resdef(1, "OK tiles", req);
     struct game *node = games;
