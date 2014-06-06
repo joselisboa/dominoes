@@ -6,7 +6,6 @@ void init(int sig);
 void stop(int sig);
 void show(int sig);
 int cleanup();
-int getspid();
 int procs();
 int count_players();
 int send(struct response res, struct request req);
@@ -47,21 +46,14 @@ int main(int argc, char *charv[]){
     struct response res;
     char action[8], side[8];
 
-    // administrator commands
-    char *A_CMDS[A] = {"show", "close"};
-
-    // administrator signals
-    A_SIGS[0] = SIGUSR1;//show
-    A_SIGS[1] = SIGUSR2;//close
-
     // run in the background
     if(fork() > 0) return;
 
     // 2nd process
     if(procs() > 1) {
-        spid = getspid();
-        for(i=0; i<A; i++)
-            if(strcmp(A_CMDS[i], charv[1]) == 0) kill(spid, A_SIGS[i]);
+        spid = getzpid(SERVER);
+        if(strcmp("show", charv[1]) == 0) kill(spid, SIGUSR1);
+        else if(strcmp("close", charv[1]) == 0) kill(spid, SIGUSR2);
         exit(0);
     }
 
@@ -523,20 +515,6 @@ struct response ni(struct request req){
     res.req = req;
     res.cmd = -1;
     return res;
-}
-
-//-----------------------------------------------------------------------------
-// Get 'server' PID
-int getspid(){
-    int server_pid, n;
-    char buffer[16];
-    FILE *finput;
-
-    buffer[0] = '\0';
-    finput = popen("pgrep server | head -1", "r");
-    if((n = read(fileno(finput), buffer, 15)) > 0) buffer[n] = '\0';
-    pclose(finput);
-    return atoi(buffer);
 }
 
 //-----------------------------------------------------------------------------

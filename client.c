@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include "public.h"
 #include "zelib.h"
-#define SERVER "./server"
 #define FIFOPATH "/tmp/fifo"
 
 int server_fifo, client_fifo;
@@ -17,7 +16,6 @@ void shutdown(int spid);
 void restart(char proc[]);
 void start(char proc[]);
 int validate_cmd(char command[]);
-int getzpid(char proc[]);
 int cleanup();
 
 //-----------------------------------------------------------------------------
@@ -319,30 +317,7 @@ void start(char proc[]){
     sleep(1);
 }
 
-// ----------------------------------------------------------------------------
-// Gets the PID from a running process 
-int getzpid(char proc[]){
-    char buffer[16], format[64];
-    FILE *finput;
-    int i, j, k = strlen(proc), n;
 
-    for(i=k; i>0; i--){
-        if(proc[i]=='/'){
-            for(j=0; i<k; i++, j++) buffer[j] = proc[i+1];
-            break;
-        }
-    }
-
-    //ps X | grep server$ | grep -o [^ ]* | head -1
-    sprintf(format, "pgrep %s | head -1", buffer);
-    buffer[0] = '\0';
-
-    finput = popen(format, "r");
-    if((n = read(fileno(finput), buffer, 15)) > 0) buffer[n] = '\0';
-    pclose(finput);
-
-    return atoi(buffer);
-}
 
 //-----------------------------------------------------------------------------
 // PLAY (game play) SIGUSR1 handler
