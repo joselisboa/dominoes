@@ -45,7 +45,7 @@ void tiles_string(char string[], struct domino *tiles){
     string[0] = '\0';
     tile[0] = '\0';
 
-    if(tiles == NULL) strcpy(string, "[tiles stock is empty]");
+    if(tiles == NULL) strcpy(string, "[]");
     while(tiles != NULL){
         sprintf(tile, "%3d:[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
         strcat(string, tile);
@@ -434,9 +434,19 @@ struct response player_tiles(struct request req){
 
     return res;
 }
+
 struct response game_tiles(struct request req){
-     return ni(req);
+    struct response res = resdef(1, "OK tiles", req);
+    struct game *node = games;
+    char hand[128];
+
+    sprintf(res.msg, "mosaic in %s\n", node->name);   
+    tiles_string(hand, node->mosaic);
+    strcat(res.msg, hand);
+
+    return res;
 }
+
 struct response play_tile(struct request req){
      return ni(req);
 }
