@@ -36,8 +36,9 @@ struct player *players = NULL;
 struct player *playing = NULL;
 struct move move;
 
-int client_fifo, server_fifo;// order important!
+int client_fifo, server_fifo;// important!
 
+void players_string(char string[]);
 void games_string(char string[]);
 void tiles_string(char string[], struct domino *tiles);
 void mosaic_string(char string[]);
@@ -56,13 +57,41 @@ void stop(int sig){
     }
     cleanup();
 }
-
+//-----------------------------------------------------------------------------
+// SHOW 
 void show(int sig){
-    printf("\nnot implemented yet");
-    printf("\npress enter to continue\n");
+    struct game *game = games;
+    struct player *player = NULL;
+    char msg[256];
+    int n;
+
+    printf("\nGAMES:");
+    if(game == NULL) puts(" (no games)");
+    else while(game != NULL){
+        printf("\n%d %s", game->id, game->name);
+        if(!game->start_t && !game->done) printf(" (waiting)");
+        
+        player = game->players;
+        n = count_players();
+        if(players == NULL) puts("\n    (no players)");
+        else while(player != NULL){
+            printf("\n    %s", player->name);
+            if(player == game->winner) puts(" (winner)");
+            player = player->prev;
+            if(player == NULL) putchar('\n');
+        }
+
+        game = game->prev;
+    }
+    
+    // users
+    printf("\nUSERS:\n");
+    players_string(msg);
+    puts(msg);
+
+    printf("press enter to continue\n");
     fflush(stdout);
 }
-
 //-----------------------------------------------------------------------------
 // LOGOUT
 struct response logout(struct request req){
@@ -75,7 +104,6 @@ struct response logout(struct request req){
 
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // STATUS
 struct response status(struct request req){
@@ -83,41 +111,42 @@ struct response status(struct request req){
 }
 
 //-----------------------------------------------------------------------------
-// USERS
+// USERS (list)
 struct response users(struct request req){
     struct response res = resdef(1, "OK users", req);
-    struct player *node = players;
-    char msg[512], line[64];
-    msg[0] = '\0';
-    line[0] ='\0';
-    while(node != NULL){
-        sprintf(line, "%d %s %d %s (%d)\n",
-            node->id, node->name, node->pid, node->fifo, node->wins);
-        strcat(msg, line);       
-        node = node->prev;
-    }
+    char msg[512];
+    players_string(msg);
     strcpy(res.msg, msg);
     return res;
 }
-
+//-----------------------------------------------------------------------------
+// players stringify
+void players_string(char string[]){
+    struct player *node = players;
+    char line[64], status[16];
+    line[0] = string[0] = '\0';
+    while(node != NULL){
+        sprintf(line, "%d %s %d %s wins:%d\n",
+            node->id, node->name, node->pid, node->fifo, node->wins);
+        strcat(string, line);       
+        node = node->prev;
+    }
+}
 //-----------------------------------------------------------------------------
 // GAMES (List)
 struct response list_games(struct request req){
     struct response res = resdef(1, "OK games", req);
-    //struct game *node = games;
-    char msg[512];//, line[64], status[16];
-    
+    char msg[512];
     if(games == NULL){
         res.cmd = 0;
         strcpy(res.msg, "there aren't any games");
         return res;
     }
-
     games_string(msg);
     strcpy(res.msg, msg);
-
     return res;
 }
+//-----------------------------------------------------------------------------
 // games stringify games
 void games_string(char string[]){
     struct game *node = games;
@@ -142,8 +171,6 @@ void games_string(char string[]){
         if(node != NULL) strcat(string, "\n");
     }
 }
-
-
 //-----------------------------------------------------------------------------
 // PLAYERS lists players in live game
 struct response list_players(struct request req){
@@ -174,7 +201,6 @@ struct response list_players(struct request req){
     strcpy(res.msg, msg);
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // NEW (Add Game)
 struct response add_game(struct request req){
@@ -206,13 +232,11 @@ struct response add_game(struct request req){
 
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // PLAY (adds player to game)
 struct response play_game(struct request req){
     struct response res = resdef(1, "OK play", req);
     struct player node, *user = NULL, *player = NULL;
-    char msg[512];
     int i, n;
 
     // there are no games
@@ -228,7 +252,10 @@ struct response play_game(struct request req){
     player = get_player_by_name(req.name, games->players);
     if(player != NULL){
         if(games->start_t) strcpy(res.msg, "you are already playing");
+        else if(games->done) sprintf(res.msg,"'%s' expired", games->name);
         else sprintf(res.msg, "you already subscribed to '%s'", games->name);
+        
+
         res.cmd = 0;
         return res;
     }
@@ -245,20 +272,17 @@ struct response play_game(struct request req){
             add_player(node, games);
         }
         else {
-            sprintf(msg,"game '%s' already started", games->name);
-            strcpy(res.msg, msg);
+            sprintf(res.msg, "game '%s' already started", games->name);
             res.cmd = 0;
         }
     }
     else {
-        sprintf(msg,"'%s' expired", games->name);
-        strcpy(res.msg, msg);
+        sprintf(res.msg,"'%s' expired", games->name);
         res.cmd = 0;
     }
 
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // EXIT (leaves)
 struct response leaves(struct request req){
@@ -270,7 +294,6 @@ struct response leaves(struct request req){
 
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // LOGIN
 struct response login(struct request req){
@@ -293,7 +316,6 @@ struct response login(struct request req){
 
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // INFO
 struct response info(struct request req){
@@ -320,7 +342,6 @@ struct response info(struct request req){
 
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // TILES response with player tiles
 struct response player_tiles(struct request req){
@@ -332,7 +353,6 @@ struct response player_tiles(struct request req){
     strcat(res.msg, hand);
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // GAME response with mosaic tiles
 struct response game_tiles(struct request req){
@@ -344,7 +364,6 @@ struct response game_tiles(struct request req){
     strcat(res.msg, hand);
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // PLAY places tile on mosaic
 struct response play_tile(struct request req){
@@ -446,7 +465,6 @@ struct response help(struct request req){
 struct response giveup(struct request req){
      return ni(req);
 }
-
 //-----------------------------------------------------------------------------
 // counts players in current game
 int count_players(){
@@ -458,7 +476,6 @@ int count_players(){
     }
     return i;
 }
-
 //-----------------------------------------------------------------------------
 // INIT (start game) SIGALRM handler
 void init(int sig){
@@ -528,7 +545,6 @@ void init(int sig){
     }
     else games->done = 1;
 }
-
 //-----------------------------------------------------------------------------
 // DEFRES (Default Response)
 struct response resdef(int cmd, char msg[], struct request req){
@@ -539,7 +555,6 @@ struct response resdef(int cmd, char msg[], struct request req){
     res.cmd = cmd;
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // NI (Not Implemented Response)
 struct response ni(struct request req){
@@ -550,7 +565,6 @@ struct response ni(struct request req){
     res.cmd = -1;
     return res;
 }
-
 //-----------------------------------------------------------------------------
 // Counts Processes
 int procs(){
@@ -563,7 +577,6 @@ int procs(){
     pclose(finput);
     return atoi(buffer);
 }
-
 //-----------------------------------------------------------------------------
 // Send
 int send(struct response res, struct request req){
@@ -587,7 +600,6 @@ int cleanup(){
     unlink(DOMINOS);
     exit(0);
 }
-
 //-----------------------------------------------------------------------------
 // Stringify tiles
 void tiles_string(char string[], struct domino *tiles){
@@ -602,7 +614,6 @@ void tiles_string(char string[], struct domino *tiles){
         tiles = tiles->next;
     }
 }
-
 //-----------------------------------------------------------------------------
 // stringify mosaic tiles
 void mosaic_string(char string[]){
@@ -618,7 +629,6 @@ void mosaic_string(char string[]){
         node = node->next;
     }
 }
-
 //-----------------------------------------------------------------------------
 // informs players of latest move 
 void inform(int sig){
@@ -643,9 +653,7 @@ void inform(int sig){
                 done = 1;
             }
         } while(k++ < 5 && !done);
-        
         player = player->prev;
     }
-
     return;
 }

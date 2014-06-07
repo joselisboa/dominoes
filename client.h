@@ -50,12 +50,12 @@ int validate_cmd(char command[]){
 
         case 5://"new",// new <nome> <s>
             if(k != 3){
-                _printf(4, "'%s' requires two additional paramaters.\n", cmd);
+                _printf(4, "'%s' requires additional paramaters\n", cmd);
                 return -1;
             }
 
             if(atoi(param2) < 1){
-                _puts("the second parameter must be a number greater than zero", 4);
+                _puts("the second parameter must be a positive number", 4);
                 return -1;
             }
 
