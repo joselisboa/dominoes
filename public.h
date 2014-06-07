@@ -9,7 +9,7 @@
 
 const char *DOMINOS = "/tmp/DOMINOS";
 
-#define SERVER "./server"
+#define SERVER "./dominoesd"
 #define NUMPECAS 7
 #define P 10
 #define C 12

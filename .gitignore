@@ -1,6 +1,6 @@
 .swp
-server
-client
+dominoes
+dominoesd
 
 # Object files
 *.o
