@@ -113,8 +113,24 @@ int validate_cmd(char command[]){
                 return is_playing();
 
             case 6:// help
-                _puts("type 'hint' for help on choosing a tile", 5);
-                _puts("HELP", 8);
+                _puts("type 'hint' for help on choosing a tile", 13);
+                _puts("HELP", 15);
+                puts("exit (terminates program)");
+                puts("logout (terminates the user session)");
+                puts("status (displays game status)");
+                puts("users (lists all users logged in)");
+                puts("new <name> <i> (creates a game that accepts players during i seconds)");
+                puts("play (joins the open game)");
+                puts("quit (quits the game where playing)");
+                puts("info (displays the live game status)");
+                puts("game (para mostrar o mosaico do jogo)");
+                puts("play <i> [<left>|<right>] (places tile i on the mosaic)");
+                puts("get (gets a tile from the dominoes stock)");
+                puts("pass (passes turn to play)");
+                puts("giveup (same as quit)");
+                //_puts("start (starts server)", 8);
+                //_puts("restart (restarts server)", 8);
+                puts("shutdown (stops server and exits)");
                 return -1;
 
             // players (list)
