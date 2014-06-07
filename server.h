@@ -38,6 +38,7 @@ struct move move;
 
 int client_fifo, server_fifo;// order important!
 
+void games_string(char string[]);
 void tiles_string(char string[], struct domino *tiles);
 void mosaic_string(char string[]);
 //-----------------------------------------------------------------------------
@@ -103,15 +104,27 @@ struct response users(struct request req){
 // GAMES (List)
 struct response list_games(struct request req){
     struct response res = resdef(1, "OK games", req);
-    struct game *node = games;
-    char msg[512], line[64], status[16];
-    if(node == NULL){
+    //struct game *node = games;
+    char msg[512];//, line[64], status[16];
+    
+    if(games == NULL){
         res.cmd = 0;
         strcpy(res.msg, "there aren't any games");
         return res;
     }
-    msg[0] = '\0';
-    line[0] ='\0';
+
+    games_string(msg);
+    strcpy(res.msg, msg);
+
+    return res;
+}
+// games stringify games
+void games_string(char string[]){
+    struct game *node = games;
+    char line[64], status[16];
+
+    line[0] = string[0] = '\0';
+    
     while(node != NULL){
         if(!node->start_t) {
             if(!node->done) strcpy(status, "waiting");
@@ -124,15 +137,12 @@ struct response list_games(struct request req){
         }
        
         sprintf(line, "%d %s (%s)", node->id, node->name, status);
-        strcat(msg, line);       
+        strcat(string, line);       
         node = node->prev;
-        if(node != NULL) strcat(res.msg, "\n");
+        if(node != NULL) strcat(string, "\n");
     }
-    
-    strcpy(res.msg, msg);
-
-    return res;
 }
+
 
 //-----------------------------------------------------------------------------
 // PLAYERS lists players in live game

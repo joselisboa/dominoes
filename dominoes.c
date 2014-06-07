@@ -10,9 +10,8 @@ int main(int argc, char *argv[]){
     int i, k, n, r, player_id;
     char buffer[256], name[32];
 
-    // signals setup
-    signal(SIGUSR1, play);// turn to play play  
-    signal(SIGUSR2, quit);// "...avisa os outros programas..."
+    signal(SIGUSR1, play);  
+    signal(SIGUSR2, quit);
 
 INIT:
     
@@ -46,29 +45,27 @@ INIT:
         exit(1);
     }
     
-// Jogador já tem FIFO e o servidor a correr (será que está mesmo a correr?)
-    printf("\e[H\e[2J");   
+    // assume-se que o servidor está a correr...
+    
+    printf("\e[H\e[2J");//printf("\33[H\33[2J"); 
 
 LOGIN:
-
-    //CLEAR DATA FROM PREV LOGIN
+    // clear data from previous login
     res.msg[0] = '\0';
     res.cmd = 0;
     req.player_id = 0;    
-
-    //printf("\33[H\33[2J");
+    
     puts("DOMINOES");
     
     // get player's name
-    getname(req.name);//, " your name: ", " %[a-ZA-Z0-9_]");
+    getname(req.name);
 
     if(strcmp(req.name, "exit") == 0) return cleanup();
-
+    
     req.pid = getpid();
     strcpy(req.cmd, "login");
-
-    // first request
     res = send(req);
+    
     //print_response(res);
 
     if(!res.cmd){
@@ -79,7 +76,7 @@ LOGIN:
     req.player_id = res.req.player_id;
     _printf(3, "welcome, %s\n", req.name);
 
-    // CMD LOOP
+    // CMD loop
     while(1){
 
         // [3] player input
@@ -107,7 +104,7 @@ LOGIN:
         // fechar o fifo do cliente
         close(client_fifo);
 
-        // PARSE RES HERE
+        // parse response here
         //TODO response parser switch
 
         if(res.cmd) _puts(res.msg, 2);
