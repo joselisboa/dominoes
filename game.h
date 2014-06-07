@@ -54,6 +54,10 @@ struct player *new_player(char name[], struct player *players);
 
 int add_player(struct player player, struct game *game);
 
+struct player *delete_player_by_name(char name[], struct player *head);
+
+int append_tiles(struct domino *head, struct domino *tiles);
+
 //-----------------------------------------------------------------------------
 // gets player (by id) from a list of players
 struct player *get_player_by_id(int id, struct player *players);

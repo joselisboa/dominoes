@@ -51,11 +51,9 @@ int main(int argc, char *charv[]){
             // login
             case 0: res = login(req);
                 break;
-            // exit
-            case 1: res = leaves(req);
-                break;
-            // logout
-            case 2: res = logout(req);
+            // exit/logout
+            case 1:
+            case 2: res = leaves(req);
                 break;
             // status
             case 3: res = status(req);

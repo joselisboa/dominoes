@@ -9,8 +9,7 @@ int procs();
 int count_players();
 int send(struct response res, struct request req);
 
-struct response leave(struct request req);
-struct response logout(struct request req);
+struct response leaves(struct request req);
 struct response status(struct request req);
 struct response users(struct request req);
 struct response add_game(struct request req);
@@ -46,6 +45,12 @@ void mosaic_string(char string[]);
 //                                                                     server.h
 // TODO split - - - > - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //                                                                     server.c
+//-----------------------------------------------------------------------------
+// get next playing player
+struct player *playing_next(){
+    if(playing == NULL || playing->prev == NULL) return games->players;
+    else return playing->prev;
+}
 //-----------------------------------------------------------------------------
 // CLOSE / STOP  (kill -s USR2 <pid>)
 void stop(int sig){
@@ -91,18 +96,6 @@ void show(int sig){
 
     printf("press enter to continue\n");
     fflush(stdout);
-}
-//-----------------------------------------------------------------------------
-// LOGOUT
-struct response logout(struct request req){
-    struct response res = resdef(1, "OK bye", req);
-    //struct player *aux = players;
-
-    //TODO restore unused tiles
-    //TODO remove player from players
-    //TODO remove player from active game (go to next player)
-
-    return res;
 }
 //-----------------------------------------------------------------------------
 // STATUS
@@ -284,13 +277,65 @@ struct response play_game(struct request req){
     return res;
 }
 //-----------------------------------------------------------------------------
-// EXIT (leaves)
+// EXIT/LOGOUT (leaves)
 struct response leaves(struct request req){
     struct response res = resdef(1, "OK bye", req);
-
+    struct player *winner, *player = NULL;
+    struct domino *tile = NULL;
+    int i=0, n=0;
+   
+    if(games != NULL) {
+        player = get_player_by_name(req.name, games->players);
+        n = count_players();
+    } 
+    
     // remove player
-    // add tiles to stock
-    // inform the player has left
+    if(games != NULL &&  player != NULL){
+        // game going on
+        if(games->start_t && !games->done){
+            // recover tiles
+            append_tiles(games->tiles, player->tiles);
+           
+            // set next playing player
+            if(playing == player) playing = playing_next();
+            
+            // delete player
+            games->players = delete_player_by_name(req.name, games->players);
+
+            // set move message
+            sprintf(move.msg, "\n%s quit", req.name);
+
+            if(count_players() < 2){
+                sprintf(move.msg, "%s\n\033[0;35m%s Wins!\033[0m", move.msg, playing->name);
+                move.winner = 0;// might be wrong beacuse move players wasn't reset yet
+                winner = get_player_by_name(playing->name, players);
+                winner->wins++;                
+                games->done = 1;
+            }
+//------------------------------------------------------------------------
+            else {
+                // reset move players
+                player = games->players;
+                while(player != NULL){
+                    // set move turn
+                    if(strcmp(playing->name, player->name) == 0) move.turn = i;
+                    strcpy(move.players[i++], player->name);
+                    player = player->prev;
+                }
+                for(i; i<4; i++) move.players[i][0] = '\0';
+            }
+            // inform other players...only if gsme is playing
+            //*
+            if(fork() == 0){
+                sleep(2);
+                kill(getppid(), SIGALRM);
+                exit(0);
+            }//*/
+        }
+    }
+
+    // delete user
+    players = delete_player_by_name(req.name, players);
 
     return res;
 }
@@ -368,7 +413,7 @@ struct response game_tiles(struct request req){
 // PLAY places tile on mosaic
 struct response play_tile(struct request req){
     struct response res = resdef(1, req.cmd, req);
-    struct player *player = NULL, *next = NULL;
+    struct player *winner = NULL, *player = NULL, *next = NULL;
     struct domino *tile = NULL;
     int tile_id, mask[2], n, i, j;
     char pos[8], string[64];
@@ -402,7 +447,7 @@ struct response play_tile(struct request req){
         // coloca a peça no mosaico
         place_tile(tile, games);
 
-        // next player
+        // next player//playing_next();
         n = count_players();
         for(i=0; i<n; i++) if(strcmp(playing->name, move.players[i]) == 0){
             j = (i+1 == n) ? 0 : i + 1;
@@ -417,12 +462,13 @@ struct response play_tile(struct request req){
 
         // player's last tile? won
         if(!count_tiles(player->tiles)) {
-            player->wins++;
+            winner = get_player_by_name(player->name, players);
+            winner->wins++;
 
             sprintf(string, "\nit was %s's last tile", player->name);
             strcat(move.msg, string);
             
-            sprintf(string, "\n%s is the Winner!", player->name);
+            sprintf(string, "\n\033[0;35m%s Wins!\033[0m", player->name);
             strcat(move.msg, string);
 
             move.winner = i-1;
@@ -481,7 +527,7 @@ int count_players(){
 void init(int sig){
     struct player *node, *player = games->players;;
     int player_fifo;
-    int done, k, i=0, n = count_players();
+    int done, k, i, n = count_players();
     char hand[128], tile[16];
     struct domino *tiles;
 
@@ -497,6 +543,7 @@ void init(int sig){
         move.winner = 0;
         move.move = 1;
         
+        i=0;
         player = games->players;
         while(player != NULL){
             strcpy(move.players[i++], player->name);

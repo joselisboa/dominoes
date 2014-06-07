@@ -4,6 +4,35 @@
 #include <string.h>
 #include "game.h"
 
+struct player *delete_player_by_name(char name[], struct player *head){
+	struct player *node, *player = get_player_by_name(name, head);
+
+	if(player == NULL) return head;
+
+	if(player == head){
+		head = player->prev;
+		free(player);
+		return head;
+	}
+	
+	node = head;
+	while(node->prev != NULL){
+		if(node->prev == player) node->prev = player->prev;
+		free(player);
+		return head;
+	}
+
+	return head;
+}
+
+// appends a list of tiles
+int append_tiles(struct domino *head, struct domino *tiles){
+	struct domino *tile = head;            
+    while(tile->next != NULL) tile = tile->next;// go to last tile
+    tile->next = tiles;// game_last ---> player_first
+    tiles->prev = tile;// game_last <--- player_first
+}
+
 // gera as peças geréricas para o dominó
 struct domino *stock(){
 	int i, j, n=0;
