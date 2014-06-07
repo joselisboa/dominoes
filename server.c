@@ -599,13 +599,50 @@ struct response get(struct request req){
 }
 
 struct response pass(struct request req){
-     return ni(req);
+    struct response res = resdef(1, "OK pass", req);
+    struct player *player = NULL;
+    struct domino *tile = NULL;
+
+    if(games == NULL || games->players == NULL || games->done) {
+        strcpy(res.msg, "can't satisfy");
+        res.cmd = 0;
+        return res;        
+    }
+
+    player = get_player_by_name(req.name, games->players);
+    if(player == NULL){
+        strcpy(res.msg, "can't satisfy");
+        res.cmd = 0;
+        return res;
+    }
+
+    if(player != playing){
+        strcpy(res.msg, "it's not your turn");
+        res.cmd = 0;
+        return res;
+    }
+
+    // set next playing player
+    playing = playing_next();
+
+    sprintf(move.msg, 
+        "\n%s passes\n\033[0mwaiting for \033[0;32m%s\033[0m to play",
+        req.name, playing->name);
+
+    if(fork() == 0){
+        sleep(1);
+        kill(getppid(), SIGALRM);
+        exit(0);
+    }
+
+    return res;
 }
+
 struct response help(struct request req){
-     return ni(req);
+    return ni(req);
 }
 struct response giveup(struct request req){
-     return ni(req);
+    return ni(req);
 }
 //-----------------------------------------------------------------------------
 // counts players in current game
