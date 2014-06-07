@@ -5,6 +5,6 @@ wookie lab work for UNIX
     
     $ make clean
     $ make
-    $ ./client
+    $ ./dominoes admin
     ...
-    $ exit
+    $ shutdown
