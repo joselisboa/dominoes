@@ -97,3 +97,6 @@ int player_status(int id, struct game *game);
 
 // gets winner (winner has less tiles)
 struct player *get_winner(struct game *game);
+
+// adiciona uma peça de domino ao mosaico
+struct domino *place_tile2(struct domino *tile, struct game *head_game, int pos);

@@ -67,23 +67,27 @@ int validate_cmd(char command[]){
             if(k == 1) return 1;
 
             // player command
-            if(k != 3) {
+            if(k < 2) {
                 _printf(4, "'%s' requires additional paramaters\n", cmd);
                 return -1;
             }
+            
             if(atoi(param1) > 28 || atoi(param1) < 1){
                 _puts("the first parameter must be a number between 1 and 28", 4);
                 return -1;
             }
-            if(!(strcmp(param2, "left") == 0)
+            
+            if(k == 3) if(!(strcmp(param2, "left") == 0)
                     && !(strcmp(param2, "right") == 0)){
                 _puts("the second parameter must be 'left' or 'right'", 4);
                 return -1;
             }
+            
             if(is_playing() == true) {
                 _puts("wait", 8);
                 return 1;
             }
+
             return -1;
 
         case 7://"quit",

@@ -312,7 +312,6 @@ struct response leaves(struct request req){
                 winner->wins++;                
                 games->done = 1;
             }
-//------------------------------------------------------------------------
             else {
                 // reset move players
                 player = games->players;
@@ -415,8 +414,9 @@ struct response play_tile(struct request req){
     struct response res = resdef(1, req.cmd, req);
     struct player *winner = NULL, *player = NULL, *next = NULL;
     struct domino *tile = NULL;
-    int tile_id, mask[2], n, i, j;
+    int tile_id, mask[2], n, i, j, p=0;
     char pos[8], string[64];
+    pos[0]='\0';
 
     string[0] = '\0';
     sscanf(req.cmd, "play %d %s", &tile_id, pos);
@@ -444,8 +444,15 @@ struct response play_tile(struct request req){
         move.move++;        
         // remove a peça ao jogador
         tile = remove_tile(tile_id, player);
+        
+        if(strcmp(pos, "right") == 0) p = 1;
+
         // coloca a peça no mosaico
-        place_tile(tile, games);
+        if(place_tile2(tile, games, p) == NULL){
+            sprintf(res.msg, "tile does not fit on the %s", pos);
+            res.cmd = 0;
+            return res;
+        };
 
         // next player//playing_next();
         n = count_players();
@@ -482,18 +489,18 @@ struct response play_tile(struct request req){
         //TODO left/right side
         //TODO move to move
         //TODO remove after inform implant
-        sprintf(res.msg, "placed tile %d on the %s", tile_id, pos);
+        sprintf(res.msg, "placed tile %d", tile_id);
+    
+        if(fork() == 0){
+            sleep(2);
+            kill(getppid(), SIGALRM);
+            exit(0);
+        }
     }
     //5. tile does NOT fit mosaic    
     else{
         strcpy(res.msg, "tile does not fit");
         res.cmd = 0;
-    }
-
-    if(fork() == 0){
-        sleep(2);
-        kill(getppid(), SIGALRM);
-        exit(0);
     }
 
     return res;

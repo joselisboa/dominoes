@@ -458,3 +458,79 @@ struct player *get_winner(struct game *game){
 
 	return winner;
 }
+
+// adiciona uma peça de domino ao mosaico
+struct domino *place_tile2(struct domino *tile, struct game *head_game, int pos){
+	struct domino *mosaic_tile, *player_tile;
+	int i, j, k, mask;
+
+	if(tile == NULL) return NULL;
+
+	// nenhuma peça no mosaico
+	if(head_game->mosaic == NULL) {
+		tile->next = NULL;
+		tile->prev = NULL;
+		head_game->mosaic = tile;
+		return head_game->mosaic;
+	}
+
+	// head tile
+	mosaic_tile = head_game->mosaic;
+	player_tile = tile;
+
+//********
+if(!pos){
+	// o dominó encaixa à esquerda
+	mask = mosaic_tile->mask[0];
+	if(player_tile->mask[0] == mask || player_tile->mask[1] == mask){
+		// encaixa o dominó no mosaico
+		if(player_tile->mask[1] != mask){
+			player_tile->mask[0] = player_tile->mask[1];
+			player_tile->mask[1] = mask;
+		}
+		// ligação ao mosaico
+		player_tile->next = mosaic_tile;//proximo
+		mosaic_tile->prev = player_tile;//anterior
+		// nó (head/ponta) principal do mosaico
+		head_game->mosaic = player_tile;
+		return head_game->mosaic;
+	}
+}
+//*
+
+	// o mosaico tem apenas um dominó
+	if(mosaic_tile->next == NULL) {
+		// encaixa à direita
+		mask = mosaic_tile->mask[1];
+		if(player_tile->mask[0] == mask || player_tile->mask[1] == mask){
+			// encaixa o dominó no mosaico
+			if(player_tile->mask[0] != mask){
+				player_tile->mask[1] = player_tile->mask[0];
+				player_tile->mask[0] = mask;
+			}
+			// ligação ao mosaico
+			player_tile->prev = mosaic_tile;//proximo
+			mosaic_tile->next = player_tile;//anterior
+			return head_game->mosaic;
+		}
+	}
+
+	// o mosaico tem mais que uma peça de domino: deslocar até ao última peça
+	while(mosaic_tile->next != NULL) mosaic_tile = mosaic_tile->next;
+
+	// encaixa à direita
+	mask = mosaic_tile->mask[1];
+	if(player_tile->mask[0] == mask || player_tile->mask[1] == mask){
+		// encaixa o dominó no mosaico
+		if(player_tile->mask[0] != mask){
+			player_tile->mask[1] = player_tile->mask[0];
+			player_tile->mask[0] = mask;
+		}
+		// ligação ao mosaico
+		player_tile->prev = mosaic_tile;//proximo
+		mosaic_tile->next = player_tile;//anterior
+		return head_game->mosaic;
+	}
+
+	return NULL;
+}
