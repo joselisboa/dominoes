@@ -185,7 +185,7 @@ void games_string(char string[]){
         }
         else {
             if(!node->done) strcpy(status, "playing");
-            else if(node->winner == NULL) strcpy(status, "none");
+            else if(node->winner == NULL) strcpy(status, "done");
             else sprintf(status, "winner: %s", node->winner->name);
         }
        
@@ -307,69 +307,7 @@ struct response play_game(struct request req){
 
     return res;
 }
-//-----------------------------------------------------------------------------
-// EXIT/LOGOUT (leaves)
-struct response leaves(struct request req){
-    struct response res = resdef(1, "OK bye", req);
-    struct player *winner, *player = NULL;
-    struct domino *tile = NULL;
-    int i=0, n=0;
-   
-    if(games != NULL) {
-        player = get_player_by_name(req.name, games->players);
-        n = count_players();
-    } 
-    
-    // remove player
-    if(games != NULL &&  player != NULL){
-        // game going on
-        if(games->start_t && !games->done){
-            // recover tiles
-            append_tiles(games->tiles, player->tiles);
-           
-            // set next playing player
-            if(playing == player) playing = playing_next();
-            
-            // delete player
-            games->players = delete_player_by_name(req.name, games->players);
 
-            // set move message
-            sprintf(move.msg, "\n%s quit", req.name);
-
-            if(count_players() < 2){
-                sprintf(move.msg, "%s\n\033[0;35m%s Wins!\033[0m", move.msg, playing->name);
-                move.winner = 0;// might be wrong beacuse move players wasn't reset yet
-                winner = get_player_by_name(playing->name, players);
-                winner->wins++;                
-                games->done = 1;
-                move.turn = -1;
-            }
-            else {
-                // reset move players
-                player = games->players;
-                while(player != NULL){
-                    // set move turn
-                    if(strcmp(playing->name, player->name) == 0) move.turn = i;
-                    strcpy(move.players[i++], player->name);
-                    player = player->prev;
-                }
-                for(i; i<4; i++) move.players[i][0] = '\0';
-            }
-            // inform other players...only if gsme is playing
-            //*
-            if(fork() == 0){
-                sleep(1);
-                kill(getppid(), SIGALRM);
-                exit(0);
-            }//*/
-        }
-    }
-
-    // delete user
-    players = delete_player_by_name(req.name, players);
-
-    return res;
-}
 //-----------------------------------------------------------------------------
 // LOGIN
 struct response login(struct request req){
@@ -545,6 +483,8 @@ struct response play_tile(struct request req){
     return res;
 }
 
+//-----------------------------------------------------------------------------
+// GET
 struct response get(struct request req){
     struct response res = resdef(1, "OK get", req);
     struct player *player = NULL;
@@ -598,6 +538,8 @@ struct response get(struct request req){
     return res;
 }
 
+//-----------------------------------------------------------------------------
+// PASS
 struct response pass(struct request req){
     struct response res = resdef(1, "OK pass", req);
     struct player *player = NULL;
@@ -638,6 +580,8 @@ struct response pass(struct request req){
     return res;
 }
 
+//-----------------------------------------------------------------------------
+// HELP/HINT
 struct response help(struct request req){
     struct response res = resdef(1, "OK help", req);
     struct player *player = NULL;
@@ -686,9 +630,74 @@ struct response help(struct request req){
     return res;
 }
 
-struct response giveup(struct request req){
-    return ni(req);
+//-----------------------------------------------------------------------------
+// EXIT/LOGOUT (leaves)
+struct response leaves(struct request req){
+    struct response res = giveup(req);
+    // delete user
+    players = delete_player_by_name(req.name, players);
+    return res;
 }
+
+struct response giveup(struct request req){
+    struct response res = resdef(1, "OK quit", req);
+    struct player *winner, *player = NULL;
+    struct domino *tile = NULL;
+    int i=0, n=0;
+   
+    if(games != NULL) {
+        player = get_player_by_name(req.name, games->players);
+        n = count_players();
+    } 
+    
+    // remove player
+    if(games != NULL &&  player != NULL){
+        // game going on
+        if(games->start_t && !games->done){
+            // recover tiles
+            append_tiles(games->tiles, player->tiles);
+           
+            // set next playing player
+            if(playing == player) playing = playing_next();
+            
+            // delete player
+            games->players = delete_player_by_name(req.name, games->players);
+
+            // set move message
+            sprintf(move.msg, "\n%s quit", req.name);
+
+            if(count_players() < 2){
+                sprintf(move.msg, "%s\n\033[0;35m%s Wins!\033[0m", move.msg, playing->name);
+                move.winner = 0;// might be wrong beacuse move players wasn't reset yet
+                winner = get_player_by_name(playing->name, players);
+                winner->wins++;                
+                games->done = 1;
+                move.turn = -1;
+            }
+            else {
+                // reset move players
+                player = games->players;
+                while(player != NULL){
+                    // set move turn
+                    if(strcmp(playing->name, player->name) == 0) move.turn = i;
+                    strcpy(move.players[i++], player->name);
+                    player = player->prev;
+                }
+                for(i; i<4; i++) move.players[i][0] = '\0';
+            }
+            // inform other players...only if gsme is playing
+            //*
+            if(fork() == 0){
+                sleep(1);
+                kill(getppid(), SIGALRM);
+                exit(0);
+            }//*/
+        }
+    }
+
+    return res;
+}
+
 //-----------------------------------------------------------------------------
 // counts players in current game
 int count_players(){

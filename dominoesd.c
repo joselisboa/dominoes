@@ -80,25 +80,32 @@ int main(int argc, char *charv[]){
                 // Players commands
                 for(i=0; i<P; i++) if(strcmp(P_CMDS[i], action) == 0) break;
                 switch (i) {
+                    
                     //info
                     case 1: res = info(req);
                         break;
+                    
                     // tiles
                     case 0:res = player_tiles(req);
                         break;
+                    
                     // game
                     case 2: res = game_tiles(req);
                         break;
+                    
                     // get
                     case 4: res = get(req);
                         break;
+                    
                     // pass
                     case 5: res = pass(req);
                         break;
+                    
                     //help/hint
                     case 8:
                     case 6: res = help(req);
                         break;
+                    
                     //giveup
                     case 7: res = giveup(req);
                         break;
