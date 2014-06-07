@@ -531,7 +531,7 @@ struct response play_tile(struct request req){
         sprintf(res.msg, "placed tile %d", tile_id);
     
         if(fork() == 0){
-            sleep(2);
+            sleep(1);
             kill(getppid(), SIGALRM);
             exit(0);
         }
@@ -639,8 +639,53 @@ struct response pass(struct request req){
 }
 
 struct response help(struct request req){
-    return ni(req);
+    struct response res = resdef(1, "OK help", req);
+    struct player *player = NULL;
+    struct domino *tile = NULL;
+    char item[16];
+    int mask[2];
+
+    if(games == NULL || games->players == NULL || games->done) {
+        strcpy(res.msg, "can't satisfy");
+        res.cmd = 0;
+        return res;        
+    }
+
+    player = get_player_by_name(req.name, games->players);
+    if(player == NULL){
+        strcpy(res.msg, "can't satisfy");
+        res.cmd = 0;
+        return res;
+    }
+    
+    if(player != playing){
+        strcpy(res.msg, "it's not your turn");
+        res.cmd = 0;
+        return res;
+    }
+
+    if(!count_tiles(games->mosaic)){
+        strcpy(res.msg, "\033[0;35mpick any tile\033[0m");
+        res.cmd = 1;
+        return res;    
+    }
+
+    res.msg[0] = '\0';
+    tile = player->tiles;
+    get_ends(mask, games->mosaic);
+    while(tile != NULL){
+        // tests if a tile fits in the mosaic
+        if(validate_tile(mask, tile)){
+            sprintf(item, "\033[0;35m%2d:[%d,%d]\033[0m", 
+                tile->id, tile->mask[0], tile->mask[1]);
+            strcat(res.msg, item);
+            if(tile->next != NULL) strcat(res.msg, "\n");
+        }
+        tile = tile->next;
+    }
+    return res;
 }
+
 struct response giveup(struct request req){
     return ni(req);
 }
@@ -698,17 +743,13 @@ void init(int sig){
                 else {
                     move.msg[0] = '\0';
                     tile[0] = '\0';
-
                     strcpy(move.msg, "Starting ");
                     strcat(move.msg, games->name);                    
-                    
                     sprintf(hand, "\n\033[0;32m%s, your dominoes", player->name);
                     strcat(move.msg, hand);
-
                     hand[0] = '\0';
                     tiles_string(hand, player->tiles);
                     strcat(move.msg, hand);  
-
                     move.turn = 1;
                     sprintf(hand, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play", playing->name);
                     strcat(move.msg, hand);  

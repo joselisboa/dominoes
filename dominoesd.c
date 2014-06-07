@@ -95,7 +95,8 @@ int main(int argc, char *charv[]){
                     // pass
                     case 5: res = pass(req);
                         break;
-                    //help
+                    //help/hint
+                    case 8:
                     case 6: res = help(req);
                         break;
                     //giveup
@@ -104,8 +105,10 @@ int main(int argc, char *charv[]){
                     // players
                     case 9: res = list_players(req);
                         break;
-                    default: res = ni(req);
-                        res.cmd = 0;
+                        
+                    default: 
+                            res = ni(req);
+                            res.cmd = 0;
                 }
             }
 
