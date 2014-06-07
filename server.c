@@ -100,7 +100,38 @@ void show(int sig){
 //-----------------------------------------------------------------------------
 // STATUS
 struct response status(struct request req){
-    return ni(req);
+    struct response res = resdef(1, "OK status", req);
+    struct game *game = games;
+    struct player *player = NULL;
+    char msg[256];
+    int n;
+    msg[0]='\0';
+
+    strcpy(res.msg, "GAME STATUS:");
+    
+    if(game == NULL) strcat(res.msg, " (no games)");
+    else while(game != NULL){
+        sprintf(msg, "\n%d %s", game->id, game->name);
+        strcat(res.msg, msg);
+        if(!game->start_t && !game->done) strcat(res.msg, " (waiting)");
+        else if(!game->done) strcat(res.msg, " (playing)");
+        else if(game->start_t)  strcat(res.msg, " (done)");
+        else strcat(res.msg, " (expired)");
+        
+        player = game->players;
+        n = count_players();
+        if(player == NULL) strcat(res.msg, "\n    (no players)");
+        else while(player != NULL){
+            sprintf(msg, "\n    %s", player->name);
+            strcat(res.msg, msg);
+            if(player == game->winner) strcat(res.msg, " (winner)");
+            player = player->prev;
+        }
+
+        game = game->prev;
+    }
+
+    return res;
 }
 
 //-----------------------------------------------------------------------------
@@ -311,6 +342,7 @@ struct response leaves(struct request req){
                 winner = get_player_by_name(playing->name, players);
                 winner->wins++;                
                 games->done = 1;
+                move.turn = -1;
             }
             else {
                 // reset move players
@@ -326,7 +358,7 @@ struct response leaves(struct request req){
             // inform other players...only if gsme is playing
             //*
             if(fork() == 0){
-                sleep(2);
+                sleep(1);
                 kill(getppid(), SIGALRM);
                 exit(0);
             }//*/
@@ -363,10 +395,16 @@ struct response login(struct request req){
 //-----------------------------------------------------------------------------
 // INFO
 struct response info(struct request req){
-    struct response res = resdef(1, "OK tiles", req);
-    struct player *node = games->players;
+    struct response res = resdef(1, "OK info", req);
+    struct player *node = NULL;//= games->players;
     char string[128];
     string[0] = '\0';
+
+    if(games == NULL || games->done) {
+        strcpy(res.msg, "no game playing");
+        res.cmd = 0;
+        return res;
+    }
 
     sprintf(res.msg, "Game: %s\n", games->name);
     sprintf(string, "Stock: %d tiles\n", count_tiles(games->tiles));
@@ -480,6 +518,7 @@ struct response play_tile(struct request req){
 
             move.winner = i-1;
             games->done = 1;
+            move.turn = -1;
         }
         else {
             sprintf(string, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play", playing->name);
@@ -507,8 +546,58 @@ struct response play_tile(struct request req){
 }
 
 struct response get(struct request req){
-     return ni(req);
+    struct response res = resdef(1, "OK get", req);
+    struct player *player = NULL;
+    struct domino *tile = NULL;
+    int mask[2];
+
+    if(games == NULL || games->players == NULL || games->done) {
+        strcpy(res.msg, "can't satisfy");
+        res.cmd = 0;
+        return res;        
+    }
+
+    player = get_player_by_name(req.name, games->players);
+    if(player == NULL){
+        strcpy(res.msg, "can't satisfy");
+        res.cmd = 0;
+        return res;
+    }
+
+    if(player != playing){
+        strcpy(res.msg, "it's not your turn");
+        res.cmd = 0;
+        return res;
+    }
+
+    // tem dominó?
+    // tests if a tile (that fits in the mosaic) exists
+    get_ends(mask, games->mosaic);
+    if(!count_tiles(games->mosaic) || tile_exists(mask, player->tiles)){
+        strcpy(res.msg, "you don't need a tile");
+        res.cmd = 0;
+        return res;
+    }
+
+    // peça de domino da casa (saco do jogo)
+    if((tile = give_tile_by_id(player->id, games)) == NULL){
+        sprintf(res.msg, "no more tiles", move.msg, playing->name);
+        res.cmd = 0;
+        return res;
+    }
+
+    sprintf(res.msg, "%s, your new tile is %d:[%d,%d]",
+        player->name, tile->id, tile->mask[0], tile->mask[1]);
+    sprintf(move.msg, "\n%s received a tile", player->name);
+    if(fork() == 0){
+        sleep(1);
+        kill(getppid(), SIGALRM);
+        exit(0);
+    }
+
+    return res;
 }
+
 struct response pass(struct request req){
      return ni(req);
 }

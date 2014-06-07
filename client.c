@@ -40,11 +40,7 @@ int validate_cmd(char command[]){
         case 0://"login",
         case 1://"exit",
         case 2://"logout",
-            return 1;
-
         case 3://"status",
-            return 0;
-
         case 4://"users",
             return 1;
 
@@ -53,12 +49,10 @@ int validate_cmd(char command[]){
                 _printf(4, "'%s' requires additional paramaters\n", cmd);
                 return -1;
             }
-
             if(atoi(param2) < 1){
                 _puts("the second parameter must be a positive number", 4);
                 return -1;
             }
-
             return 1;
 
         // play
@@ -71,27 +65,24 @@ int validate_cmd(char command[]){
                 _printf(4, "'%s' requires additional paramaters\n", cmd);
                 return -1;
             }
-            
             if(atoi(param1) > 28 || atoi(param1) < 1){
                 _puts("the first parameter must be a number between 1 and 28", 4);
                 return -1;
             }
-            
             if(k == 3) if(!(strcmp(param2, "left") == 0)
                     && !(strcmp(param2, "right") == 0)){
                 _puts("the second parameter must be 'left' or 'right'", 4);
                 return -1;
             }
-            
             if(is_playing() == true) {
                 _puts("wait", 8);
                 return 1;
             }
-
             return -1;
 
-        case 7://"quit",
-            return 0;
+        case 7:// quit
+        case 11:// users 
+            return 1;
 
         case 8://"start",
             start(SERVER);
@@ -105,17 +96,15 @@ int validate_cmd(char command[]){
             restart(SERVER);
             return -1;
 
-        case 11:// users
-            return 1;
-
         default:
 
         // player commands
         for(i=0; i<P; i++) if(strcmp(P_CMDS[i], cmd) == 0) break;
 
-        switch(i){
+        switch(i){            
+            case 1:// info
+                return 1;            
             case 0:// tiles
-            case 1:// info 
             case 2:// game 
             case 4:// get
             case 5:// pass

@@ -46,10 +46,8 @@ INIT:
     }
     
     // assume-se que o servidor está a correr...
-    
-    printf("\e[H\e[2J");//printf("\33[H\33[2J"); 
-
 LOGIN:
+    printf("\e[H\e[2J");//printf("\33[H\33[2J"); 
     // clear data from previous login
     res.msg[0] = '\0';
     res.cmd = 0;
