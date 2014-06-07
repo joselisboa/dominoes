@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "public.h"
 #include "zelib.h"
-#include "client.h"
+#include "client.c"
 
 //-----------------------------------------------------------------------------
 // DOMINOES

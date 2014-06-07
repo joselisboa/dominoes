@@ -148,10 +148,12 @@ void getname(char name[]){//, char *prompt[], char *format[]){
         scanf(" %[^\n]", buffer);
         r = sscanf(buffer, " %s", name);
         
+        if(strcmp(name, "exit")==0) break;
+
         // client commands
         for(i=0; i<C; i++) if(strcmp(C_CMDS[i], name) == 0) {
             _printf(4, "the name '%s' is reserved\n", name);
-            r =0;
+            r = 0;
             goto BEGIN;
         }
 

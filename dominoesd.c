@@ -1,6 +1,6 @@
 #include "game.h"
 #include "public.h"
-#include "server.h"
+#include "server.c"
 
 //-----------------------------------------------------------------------------
 // DOMINOES DAEMON
