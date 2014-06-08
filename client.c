@@ -7,7 +7,7 @@ struct response res;
 void play(int sig);
 void quit(int sig);
 void print_response(struct response res);
-void getname(char name[]);//, char *prompt[], char *format[]){
+void getname(char name[]);
 struct response send(struct request req);
 void shutdown(int spid);
 void restart(char proc[]);
@@ -29,7 +29,6 @@ int validate_cmd(char command[]){
 
     // scan user commands
     if(!(k = sscanf(command, "%s %s %s", cmd, param1, param2))) return 0;
-    //printf("k=%d, cmd=%s, param1=%s, param2=%s", k, cmd, param1, param2);
 
     // client commands
     for(i=0; i<C; i++)
@@ -37,14 +36,14 @@ int validate_cmd(char command[]){
             break;
 
     switch(i){
-        case 0://"login",
-        case 1://"exit",
-        case 2://"logout",
-        case 3://"status",
-        case 4://"users",
+        case 0:// login
+        case 1:// exit
+        case 2:// logout
+        case 3:// status
+        case 4:// users
             return 1;
 
-        case 5://"new",// new <nome> <s>
+        case 5:// new <nome> <s>
             if(k != 3){
                 _printf(4, "'%s' requires additional paramaters\n", cmd);
                 return -1;
@@ -53,25 +52,29 @@ int validate_cmd(char command[]){
                 _puts("the second parameter must be a positive number", 4);
                 return -1;
             }
+            else if(atoi(param2) > 600) {
+                _puts("the interval is too long", 4);
+                return -1;
+            }
             return 1;
 
         // play
-        case 6://"play",//'play 99 left' or 'play 18 right'
-            // client command
+        case 6:
+            // client commands
             if(k == 1) return 1;
 
-            // player command
+            // player commands
             if(k < 2) {
                 _printf(4, "'%s' requires additional paramaters\n", cmd);
                 return -1;
             }
             if(atoi(param1) > 28 || atoi(param1) < 1){
-                _puts("the first parameter must be a number between 1 and 28", 4);
+                _puts("enter a number between 1 and 28", 4);
                 return -1;
             }
             if(k == 3) if(!(strcmp(param2, "left") == 0)
                     && !(strcmp(param2, "right") == 0)){
-                _puts("the second parameter must be 'left' or 'right'", 4);
+                _puts("optional parameter is 'left' or 'right'", 4);
                 return -1;
             }
             if(is_playing() == true) {
@@ -84,7 +87,7 @@ int validate_cmd(char command[]){
         case 11:// users 
             return 1;
 
-        case 8://"start",
+        case 8:// start
             start(SERVER);
             return -1;
 
@@ -99,20 +102,24 @@ int validate_cmd(char command[]){
         default:
 
         // player commands
-        for(i=0; i<P; i++) if(strcmp(P_CMDS[i], cmd) == 0) break;
+        for(i=0; i<P; i++) 
+            if(strcmp(P_CMDS[i], cmd) == 0) 
+                break;
 
         switch(i){            
             case 1:// info
-                return 1;            
+                return 1;
+
             case 0:// tiles
             case 2:// game 
             case 4:// get
             case 5:// pass
+            case 6:// help
             case 7:// giveup
             case 8:// hint
                 return is_playing();
 
-            case 6:// help
+            case 666:// help
                 _puts("type 'hint' for help on choosing a tile", 13);
                 _puts("HELP", 15);
                 puts("exit (terminates program)");
@@ -159,19 +166,17 @@ void getname(char name[]){
         scanf(" %[^\n]", buffer);
         r = sscanf(buffer, " %s", name);
         
-        if(strcmp(name, "exit")==0) break;
+        if(strcmp(name, "exit") == 0) break;
 
         // client commands
         for(i=0; i<C; i++) if(strcmp(C_CMDS[i], name) == 0) {
             _printf(4, "the name '%s' is reserved\n", name);
-            r = 0;
             goto BEGIN;
         }
 
         // player commands
         for(i=0; i<P; i++) if(strcmp(P_CMDS[i], name) == 0){
             _printf(4, "the name '%s' is reserved\n", name);
-            r=0;
             goto BEGIN;
         }
     }
@@ -184,7 +189,6 @@ struct response send(struct request req){
 
     // enviar dados ao servidor
     write(server_fifo, &req, sizeof(req));
-
     _puts("wait", 8);
 
     // abrir fifo privado em modo de leitura
@@ -192,6 +196,7 @@ struct response send(struct request req){
         perror(req.fifo);
         exit(-1);
     }
+
     // ler dados
     read(client_fifo, &res, sizeof(res));
 
@@ -205,7 +210,9 @@ struct response send(struct request req){
 // SHUTDOWN shuts down server and exits
 void shutdown(int spid){
     _printf(8, "kill -%d  %d [%d]\n", SIGUSR2, spid, kill(spid, SIGUSR2));
-    //TODO check status?
+    
+    //TODO check status
+    
     cleanup();
 }
 
@@ -220,7 +227,7 @@ void restart(char proc[]){
 }
 
 // ----------------------------------------------------------------------------
-// START (starts a process)
+// START starts a process
 void start(char proc[]){
     _printf(8, "starting %s\nwait\n", proc);
     system(proc);
@@ -228,7 +235,7 @@ void start(char proc[]){
 }
 
 //-----------------------------------------------------------------------------
-// PLAY (game play) SIGUSR1 handler
+// PLAY SIGUSR1 handler
 void play(int sig){
     struct move status;
     int len;
@@ -239,7 +246,7 @@ void play(int sig){
         return;
     }
 
-    // [6] ler dados
+    // ler dados
     read(client_fifo, &status, sizeof(status));
     // fechar o fifo do cliente
     close(client_fifo);
@@ -254,9 +261,10 @@ void play(int sig){
 }
 
 //-----------------------------------------------------------------------------
-// QUIT closes client (SIGUSR2 handler)
+// QUIT SIGUSR2 handler to quit
 void quit(int sig){
     int i = 4;
+
     _puts("\nthe server is shutting down", 3);
     sleep(1);// 1 sec before terminating
     _puts("terminated", 5);
@@ -265,6 +273,7 @@ void quit(int sig){
 }
 
 //-----------------------------------------------------------------------------
+// closes server's FIFO and deletes client's FIFO 
 int cleanup(){
     close(server_fifo);
     unlink(req.fifo);
@@ -272,22 +281,7 @@ int cleanup(){
 }
 
 //-----------------------------------------------------------------------------
-// DEV
-void print_response(struct response res){
-    puts("res: {");
-    printf("    pid: %d\n", res.pid);
-    printf("    msg: \"%s\"\n", res.msg);
-    puts("    req: {");
-    printf("        pid = %d,\n", res.req.pid);
-    printf("        name: \"%s\",\n", res.req.name);
-    printf("        player_id: %d,\n", res.req.player_id);
-    printf("        fifo: \"%s\",\n", res.req.fifo);
-    printf("        cmd: \"%s\"\n", res.req.cmd);
-    puts("    },");
-    printf("    res: %d\n", res.cmd);
-    puts("}");
-}
-
+// is playing?
 int is_playing(){
     if(!playing) {
         _puts("you are not playing", 4);
