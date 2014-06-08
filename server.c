@@ -46,10 +46,10 @@ void tiles_string(char string[], struct domino *tiles);
 void mosaic_string(char string[]);
 //-----------------------------------------------------------------------------
 //                                                                     server.h
-// TODO split - - - > - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+//TODO split file  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
 //                                                                     server.c
 //-----------------------------------------------------------------------------
-// count tiles when game locks
+// Blocked, none of the players have a tile that fits the mosaic
 int blocked(){
     struct player *player = NULL;
     struct domino *tile = NULL;
