@@ -195,7 +195,7 @@ void show_mosaic(struct domino *tiles){
 	_puts("Mosaic:", 15);
 	if(tiles == NULL) puts("[]");
 	else while(tiles != NULL){
-		_printf(15, "[%d,%d]", tiles->id, tiles->mask[0], tiles->mask[1]);
+		_printf(15, "[%d,%d]", tiles->mask[0], tiles->mask[1]);
 		tiles = tiles->next;
 		if(tiles == NULL) puts("");
 	}
