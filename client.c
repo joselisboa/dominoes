@@ -128,8 +128,10 @@ int validate_cmd(char command[]){
                 puts("get (gets a tile from the dominoes stock)");
                 puts("pass (passes turn to play)");
                 puts("giveup (same as quit)");
-                //_puts("start (starts server)", 8);
-                //_puts("restart (restarts server)", 8);
+                puts("start (starts server)");
+                puts("restart (restarts server)");
+                puts("players (lists last players)");
+                puts("games (lists all games)");
                 puts("shutdown (stops server and exits)");
                 return -1;
 
@@ -144,7 +146,7 @@ int validate_cmd(char command[]){
 
 // ----------------------------------------------------------------------------
 // prompts player's name
-void getname(char name[]){//, char *prompt[], char *format[]){
+void getname(char name[]){
     char buffer[32];
     int i, r = 0;
 
@@ -205,7 +207,6 @@ void shutdown(int spid){
     _printf(8, "kill -%d  %d [%d]\n", SIGUSR2, spid, kill(spid, SIGUSR2));
     //TODO check status?
     cleanup();
-    //exit(1);
 }
 
 // ----------------------------------------------------------------------------
@@ -214,16 +215,16 @@ void restart(char proc[]){
     int pid = getzpid(proc);
     _printf(8, "%s is restarting\n", proc);
     shutdown(pid);
-    sleep(1);
+    sleep(1);// give 1 sec for the process to terminate
     start(SERVER);
 }
 
 // ----------------------------------------------------------------------------
-// START (starts the server)
+// START (starts a process)
 void start(char proc[]){
     _printf(8, "starting %s\nwait\n", proc);
     system(proc);
-    sleep(1);
+    sleep(1);// give 1 sec for the process to start
 }
 
 //-----------------------------------------------------------------------------
@@ -257,14 +258,9 @@ void play(int sig){
 void quit(int sig){
     int i = 4;
     _puts("\nthe server is shutting down", 3);
-    _puts("client terminating now", 5);
+    sleep(1);// 1 sec before terminating
+    _puts("terminated", 5);
     fflush(stdout);
-    
-    while(i > 1){
-        _printf(3, "%d\n", --i);
-        sleep(1);  
-    }
-
     exit(cleanup());
 }
 

@@ -4,6 +4,11 @@
 #include <string.h>
 #include "game.h"
 
+// Dummy
+struct player *has_less(){
+    return NULL;
+}
+
 struct player *delete_player_by_name(char name[], struct player *head){
 	struct player *node, *player = get_player_by_name(name, head);
 

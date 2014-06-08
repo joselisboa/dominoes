@@ -3,8 +3,7 @@
 #include "server.c"
 
 //-----------------------------------------------------------------------------
-// DOMINOES DAEMON
-//-----------------------------------------------------------------------------
+// DOMINOES daemon
 int main(int argc, char *charv[]){
     int spid, aux_fifo, tile_id, i, k, n, A_SIGS[A];
     struct request req;
@@ -19,7 +18,6 @@ int main(int argc, char *charv[]){
         spid = getzpid(SERVER);
         if(strcmp("show", charv[1]) == 0) kill(spid, SIGUSR1);
         else if(strcmp("close", charv[1]) == 0) kill(spid, SIGUSR2);
-        sleep(1);
         exit(0);
     }
 
@@ -31,95 +29,87 @@ int main(int argc, char *charv[]){
     signal(SIGUSR2, stop);
     signal(SIGALRM, init);
 
-    // [1] Gerar FIFO público, e aguardar dados do cliente
+    // FIFO público
     mkfifo(DOMINOS, 0666);
     
-    // the keeps its fifo open and does not exit
+    // keeps fifo open (does not exit)
     while(1){
-
-        // [3] Abrir FIFO do cliente em modo de escrita
+        // Abrir FIFO do cliente em modo de escrita
         if((server_fifo = open(DOMINOS, O_RDONLY)) < 0) {
-            perror("BROKE UP");
+            perror("FIFO ERROR");
             exit(1);
         }
 
-        // [2] Ler pedido pelo FIFO público
+        // Listen for requests on the public FIFO
         while(read(server_fifo, &req, sizeof(req)) > 0){
-            // [4] Satisfazer pedido do cliente
+            // parse client request
             k = sscanf(req.cmd, "%s %d %s", action, &tile_id, side);
-
-            // Client commands
-            for(i=0; i<C; i++) if(strcmp(C_CMDS[i], action) == 0) break;
+            
+            for(i=0; i<C; i++) 
+                if(strcmp(C_CMDS[i], action) == 0) break;
+            
+            // client commands
             switch(i) {
-                // login
-                case 0: res = login(req);
+                case 0:// login 
+                    res = login(req);
                     break;
-                // exit/logout
-                case 1:
-                case 2: res = leaves(req);
+                case 1:// exit
+                case 2:// logout
+                    res = leaves(req);
                     break;
-                // status
-                case 3: res = status(req);
+                case 3:// status 
+                    res = status(req);
                     break;
-                // users
-                case 4: res = users(req);
+                case 4:// users 
+                    res = users(req);
                     break;
-                // new
-                case 5: res = add_game(req);
+                case 5:// new 
+                    res = add_game(req);
                     break;
-                // play
-                case 6: res = (k == 1)? play_game(req) : play_tile(req);
+                case 6:// play 
+                    res = k==1? play_game(req): play_tile(req);
                     break;
-                // quit
-                case 7: res = leaves(req);
+                case 7:// quit 
+                    res = leaves(req);
                     break;
-                // games
-                case 11: res = list_games(req);
+                case 11:// games 
+                    res = list_games(req);
                     break;
-                default:
-                // Players commands
+                default:// Players commands
                 for(i=0; i<P; i++) if(strcmp(P_CMDS[i], action) == 0) break;
                 switch (i) {
-                    
-                    //info
-                    case 1: res = info(req);
+                    case 1://info 
+                        res = info(req);
                         break;
-                    
-                    // tiles
-                    case 0:res = player_tiles(req);
+                    case 0:// tiles
+                        res = player_tiles(req);
                         break;
-                    
-                    // game
-                    case 2: res = game_tiles(req);
+                    case 2:// game 
+                        res = game_tiles(req);
                         break;
-                    
-                    // get
-                    case 4: res = get(req);
+                    case 4:// get 
+                        res = get(req);
                         break;
-                    
-                    // pass
-                    case 5: res = pass(req);
+                    case 5:// pass 
+                        res = pass(req);
                         break;
-                    
-                    //help/hint
-                    case 8:
-                    case 6: res = help(req);
+                    case 8://hint
+                    case 6://help
+                        res = help(req);
                         break;
-                    
-                    //giveup
-                    case 7: res = giveup(req);
+                    case 7://giveup 
+                        res = giveup(req);
                         break;
-                    // players
-                    case 9: res = list_players(req);
+                    case 9:// players 
+                        res = list_players(req);
                         break;
-                        
                     default: 
-                            res = ni(req);
-                            res.cmd = 0;
+                        res = ni(req);
+                        res.cmd = 0;
                 }
             }
 
-            //[5] Enviar dados pelo FIFO do cliente
+            // send response through client's private FIFO
             if(!send(res, req)) {
                 perror("Did not access the client fifo\n");
                 break;
@@ -128,6 +118,5 @@ int main(int argc, char *charv[]){
     }
 
     close(server_fifo);
-
     return cleanup();
 }

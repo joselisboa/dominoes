@@ -42,6 +42,8 @@ struct player {
 	struct player *prev;
 };
 
+struct player *has_less();
+
 struct domino *stock();
 
 struct domino *tiles();
