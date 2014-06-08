@@ -192,7 +192,7 @@ void show_tiles(struct domino *tiles){
 // displays the tiles on the screen
 void show_mosaic(struct domino *tiles){
 	_puts("Mosaic:\n", 15);
-	if(mosaic == NULL) puts("[]");
+	if(tiles == NULL) puts("[]");
 	else while(tiles != NULL){
 		_printf(15, "[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
 		tiles = tiles->next;
