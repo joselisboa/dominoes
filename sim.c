@@ -124,7 +124,7 @@ struct game *play(struct game *game){
 	player = game->players;
 	while(player != NULL){
 		// mostra jogador/peças
-		_printf(9 + player->id*2, "%s\n", player->name);
+		_printf(13, "%s\n", player->name);
 		show_tiles(player->tiles);
 
 		// ensures the player has a tile to play
@@ -197,5 +197,6 @@ void show_mosaic(struct domino *tiles){
 	else while(tiles != NULL){
 		_printf(15, "[%d,%d]", tiles->id, tiles->mask[0], tiles->mask[1]);
 		tiles = tiles->next;
+		if(tiles == NULL) puts("");
 	}
 }
