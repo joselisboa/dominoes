@@ -190,7 +190,7 @@ void show_tiles(struct domino *tiles){
 	}
 }
 // displays the tiles on the screen
-void show_mosaic(struct domino *mosaic){
+void show_mosaic(struct domino *tiles){
 	_puts("Mosaic:\n", 15);
 	if(mosaic == NULL) puts("[]");
 	else while(tiles != NULL){
