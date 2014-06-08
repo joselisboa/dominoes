@@ -61,7 +61,8 @@ void ui(){
 				aux_player = game->players;
 				while(aux_player != NULL){
 					printf("%d %s: ", aux_player->id, aux_player->name);
-					show_tiles(aux_player->tiles);
+					if(aux_player->tiles==NULL) puts("");
+					else show_tiles(aux_player->tiles);
 					aux_player = aux_player->prev;
 				}
 				break;
@@ -176,14 +177,24 @@ struct game *play(struct game *game){
 int game_status(struct game *game){
 	printf("games has %d tiles\n", count_tiles(game->tiles));
 	printf("mosaic has %d tiles\n", count_tiles(game->mosaic));
-	puts("Mosaico:");
-	show_tiles(game->mosaic);
+	//puts("Mosaico:");
+	show_mosaic(game->mosaic);
 }
 
 // displays the tiles on the screen
 void show_tiles(struct domino *tiles){
-	while(tiles != NULL){
+	if(tiles == NULL) puts("[]");
+	else while(tiles != NULL){
 		_printf(13, "%3d:[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
+		tiles = tiles->next;
+	}
+}
+// displays the tiles on the screen
+void show_mosaic(struct domino *mosaic){
+	_puts("Mosaic:\n", 15);
+	if(mosaic == NULL) puts("[]");
+	else while(tiles != NULL){
+		_printf(15, "[%d,%d]\n", tiles->id, tiles->mask[0], tiles->mask[1]);
 		tiles = tiles->next;
 	}
 }
