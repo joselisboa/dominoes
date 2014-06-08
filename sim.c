@@ -13,6 +13,7 @@ int prompt_player(struct player *player, int mask[]);
 struct game *play(struct game *game);
 int game_status(struct game *game);
 void show_tiles(struct domino *tiles);
+void show_mosaic(struct domino *tiles);
 
 int main(int varc, char *charv[]){
 	//simulation
