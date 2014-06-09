@@ -48,6 +48,8 @@ struct filename _file(char filename[]){
 	return file;
 }
 
+char leonbuffer[256];
+
 void _puts(char *format, int k);
 
 // like PHP function die
@@ -74,4 +76,17 @@ void _printf(int k, char *format, ...){
 	vprintf(format, args);
 	va_end(args);
     printf("\033[0m");
+}
+
+const char *chameleon(char string[], int i){
+    char buffer[256];
+    strcpy(buffer,_colors[i]);
+    strcat(buffer, string);
+    strcat(buffer, "\033[0m");
+    strcpy(leonbuffer, buffer);
+    return leonbuffer;
+}
+
+void clear(){
+    printf("\e[H\e[2J");//printf("\33[H\33[2J"); 
 }

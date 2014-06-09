@@ -4,41 +4,25 @@
 #include "client.c"
 
 //-----------------------------------------------------------------------------
-// DOMINOES
-//-----------------------------------------------------------------------------
+// DOMINOES Lab Work for SO (Operating Systems)
 int main(int argc, char *argv[]){
-    int i, k, n, r, player_id;
-    char buffer[256], name[32];
+    char buffer[256];
 
+    // set signal handlers
     signal(SIGUSR1, play);  
     signal(SIGUSR2, quit);
 
-INIT:
-    
-    // [0] executa o servidor se o seu FIFO não existir
-    if(!getzpid(SERVER)) {
-         if(argc > 1 && strcmp(argv[1], "admin") == 0) start(SERVER);
-         else {
-             puts("the server is not running");
-             exit(1);
-         }
-    }
-    else if(access(DOMINOS, F_OK)) {
-         if(argc > 1 && strcmp(argv[1], "admin") == 0) restart(SERVER);
-         else {
-             puts("the server is not running");
-             exit(1);
-         }
-    }
+    // server status
+    status(argc, argv);
 
-    // [1] cria o fifo privado (cliente)
+    // create the private fifo (client)
     sprintf(req.fifo, "%s_%d", FIFOPATH, getpid());
     if(mkfifo(req.fifo, 0666) < 0){
         perror(req.fifo);
         exit(1);
     }
 
-    // [2] abre o fifo do servidor em modo de escrita
+    // open the public fifo (server) in read only mode
     if((server_fifo = open(DOMINOS, O_WRONLY)) < 0){
         unlink(req.fifo);
         perror(DOMINOS);
@@ -46,76 +30,60 @@ INIT:
     }
     
     // assume-se que o servidor está a correr...
-LOGIN:
-    printf("\e[H\e[2J");//printf("\33[H\33[2J"); 
-    // clear data from previous login
+    LOGIN:
+    clear();
+
+    // authenticate or exit
+    if(!auth(req.name)) return cleanup();
+
+    // reset login data
+    strcpy(req.cmd, "login");
+    req.pid = getpid();
+    req.player_id = 0;
     res.msg[0] = '\0';
     res.cmd = 0;
-    req.player_id = 0;    
     
-    puts("DOMINOES");
-    
-    // get player's name
-    getname(req.name);
-
-    if(strcmp(req.name, "exit") == 0) return cleanup();
-    
-    req.pid = getpid();
-    strcpy(req.cmd, "login");
+    // send login request
     res = send(req);
     
-    //print_response(res);
-
+    // login rejected
     if(!res.cmd){
-        _puts(res.msg, 4);
+        puts(chameleon(res.msg, 4));
         goto LOGIN;
     }
 
-    req.player_id = res.req.player_id;
-    _printf(3, "welcome, %s\n", req.name);
+    req = res.req;
+    
+    sprintf(buffer, "welcome, %s", req.name);
+    strcpy(buffer, chameleon(buffer, 3));
 
-    // CMD loop
-    while(1){
+    // request loop
+    while(TRUE){
+        // output to user
+        if(buffer[0] != '\0'){
+            write(2, buffer, strlen(buffer));
+            buffer[0] = '\0';
+        }
 
-        // [3] player input
-        printf("> ");
+        write(2, "\n> ", 3);
+
+        // input from user (request)
         scanf(" %[^\n]", req.cmd);
 
-        // PARSE CMD (16 bytes) HERE
+        // validate request or prompt again
+        if(!validate(req.cmd, buffer)) continue;
 
-        // [4] enviar dados ao servidor
-        if((r = validate_cmd(req.cmd)) > 0)
-            write(server_fifo, &req, sizeof(req));
-        else {
-            if(!r) printf("no such command '%s'\n", req.cmd);
-            continue;
-        }
+        // send request
+        res = send(req);
 
-        // [5] abrir fifo privado em modo de leitura
-        if((client_fifo = open(req.fifo, O_RDONLY)) < 0){
-            perror(req.fifo);
-            break;
-        }
-
-        // [6] ler dados
-        read(client_fifo, &res, sizeof(res));
-        // fechar o fifo do cliente
-        close(client_fifo);
-
-        // parse response here
-        //TODO response parser switch
-
-        if(res.cmd) _puts(res.msg, 2);
-        else _puts(res.msg, 4);
-
-        //DEV
-        //print_response(res);
+        // copy the response message to the buffer
+        strcpy(buffer, chameleon(res.msg, res.cmd?2:4));
 
         // LOGOUT
-        if(strcmp(req.cmd, "logout") == 0) goto LOGIN;
+        if(!strcmp(req.cmd, "logout")) goto LOGIN;
 
         // EXIT
-        if(strncmp("exit", req.cmd, 3) == 0) return cleanup();
+        if(!strncmp("exit", req.cmd, 3)) break;
     }
     
     return cleanup();

@@ -7,23 +7,37 @@ struct response res;
 void play(int sig);
 void quit(int sig);
 void print_response(struct response res);
-void getname(char name[]);
+int auth(char name[]);//, char *prompt[], char *format[]){
 struct response send(struct request req);
 void shutdown(int spid);
-void restart(char proc[]);
 void start(char proc[]);
-int validate_cmd(char command[]);
+int validate(char command[], char buffer[]);
 int cleanup();
 
 int playing = false;
 int is_playing();
+void status(int argc, char *argv[]);
+int help(char buffer[]){
+    //char block[256];
+    char c;
+    int in, n;
+
+    in = open("help.txt", O_RDONLY);
+    while(read(in, &c, sizeof(c)) == 1){
+        write(2, &c, sizeof(c));
+    }
+
+    close(in);
+
+    return 0;
+}
 //-----------------------------------------------------------------------------
 //                                                                     client.h
 // TODO split - - - > - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 //                                                                     client.c
 //-----------------------------------------------------------------------------
 // validates command
-int validate_cmd(char command[]){
+int validate(char command[], char buffer[]){
     char cmd[8], param1[32], param2[16];
     int i, k;
 
@@ -45,43 +59,52 @@ int validate_cmd(char command[]){
 
         case 5:// new <nome> <s>
             if(k != 3){
-                _printf(4, "'%s' requires additional paramaters\n", cmd);
-                return -1;
+                strcpy(buffer, chameleon("usage", 8));
+                strcat(buffer, chameleon(" new myGame 180", 4));
+                return 0;
             }
+            
             if(atoi(param2) < 1){
-                _puts("the second parameter must be a positive number", 4);
-                return -1;
+                strcpy(buffer, 
+                    chameleon("parameter 2 must be a positive number", 4));
+                return 0;
             }
             else if(atoi(param2) > 600) {
-                _puts("the interval is too long", 4);
-                return -1;
+                strcpy(buffer, chameleon("the interval is too long", 4));
+                return 0;
             }
+
             return 1;
 
         // play
-        case 6:
-            // client commands
+        case 6:            
+            // request to join game
             if(k == 1) return 1;
 
-            // player commands
+            // the user is not playing
+            if(!is_playing(buffer)) return 0;
+
+            // player command
             if(k < 2) {
-                _printf(4, "'%s' requires additional paramaters\n", cmd);
-                return -1;
+                strcpy(buffer, chameleon(cmd, 12));
+                strcat(buffer, 
+                    chameleon(" usage: play 23 [right/left]", 4));
+                return 0;
             }
+            
             if(atoi(param1) > 28 || atoi(param1) < 1){
-                _puts("enter a number between 1 and 28", 4);
-                return -1;
+                strcpy(buffer, chameleon("tile id is a number between 1 and 28", 4));
+                return 0;
             }
+            
             if(k == 3) if(!(strcmp(param2, "left") == 0)
                     && !(strcmp(param2, "right") == 0)){
-                _puts("optional parameter is 'left' or 'right'", 4);
-                return -1;
+                sprintf(buffer, "parameter two is %s or %s", 
+                    chameleon("left", 15), chameleon("right", 15));
+                return 0;
             }
-            if(is_playing() == true) {
-                _puts("wait", 8);
-                return 1;
-            }
-            return -1;
+
+            return 1;
 
         case 7:// quit
         case 11:// users 
@@ -89,62 +112,42 @@ int validate_cmd(char command[]){
 
         case 8:// start
             start(SERVER);
-            return -1;
+            return 0;
 
         case 9:// shutdown
-            shutdown(getzpid(SERVER));
+            kill(getzpid(SERVER), SIGUSR2);
+            //shutdown(getzpid(SERVER));
+            sleep(1);
             return -1;
 
         case 10:// restart
-            restart(SERVER);
-            return -1;
-
         default:
 
         // player commands
-        for(i=0; i<P; i++) 
-            if(strcmp(P_CMDS[i], cmd) == 0) 
-                break;
+        for(i=0; i<P; i++) if(strcmp(P_CMDS[i], cmd) == 0) break;
 
         switch(i){            
-            case 1:// info
-                return 1;
-
-            case 0:// tiles
-            case 2:// game 
+            case 1:// info           
+            case 0:// tiles*
+            case 2:// game*
             case 4:// get
             case 5:// pass
             case 6:// help
-            case 7:// giveup
+            case 7:// giveup*
             case 8:// hint
-                return is_playing();
+                return is_playing(buffer);
 
-            case 666:// help
-                _puts("type 'hint' for help on choosing a tile", 13);
-                _puts("HELP", 15);
-                puts("exit (terminates program)");
-                puts("logout (terminates the user session)");
-                puts("status (displays game status)");
-                puts("users (lists all users logged in)");
-                puts("new <name> <i> (creates a game that accepts players during i seconds)");
-                puts("play (joins the open game)");
-                puts("quit (quits the game where playing)");
-                puts("info (displays the live game status)");
-                puts("game (para mostrar o mosaico do jogo)");
-                puts("play <i> [<left>|<right>] (places tile i on the mosaic)");
-                puts("get (gets a tile from the dominoes stock)");
-                puts("pass (passes turn to play)");
-                puts("giveup (same as quit)");
-                puts("start (starts server)");
-                puts("restart (restarts server)");
-                puts("players (lists last players)");
-                puts("games (lists all games)");
-                puts("shutdown (stops server and exits)");
-                return -1;
+            case 69: 
+                printf("type %s for help on choosing a tile to play\n", 
+                    chameleon("hint", 15));
+                return help(buffer);
 
             // players (list)
             case 9: return 1;
-            default: return 0;
+            default: 
+                strcpy(buffer, chameleon("don't know ", 4));
+                strcat(buffer, chameleon(req.cmd, 12));                
+                return 0;
         }
     }
 
@@ -153,33 +156,41 @@ int validate_cmd(char command[]){
 
 // ----------------------------------------------------------------------------
 // prompts player's name
-void getname(char name[]){
+int auth(char name[]){
     char buffer[32];
-    int i, r = 0;
+    int i=C, j=P, r = 0;
 
+    puts(chameleon("DOMINOES", 15));
     fflush(stdout);
 
     while(!r){
-    BEGIN:
-        _puts("your name:", 3);
+    BEGINING:   
+        puts(chameleon("enter your name", 3));
         printf("> ");
         scanf(" %[^\n]", buffer);
         r = sscanf(buffer, " %s", name);
         
-        if(strcmp(name, "exit") == 0) break;
+        if(!strcmp(name, "exit")) return 0;
 
         // client commands
-        for(i=0; i<C; i++) if(strcmp(C_CMDS[i], name) == 0) {
-            _printf(4, "the name '%s' is reserved\n", name);
-            goto BEGIN;
-        }
+        for(i=0; i<C; i++) 
+            if(!strcmp(C_CMDS[i], name))
+                break;
 
         // player commands
-        for(i=0; i<P; i++) if(strcmp(P_CMDS[i], name) == 0){
-            _printf(4, "the name '%s' is reserved\n", name);
-            goto BEGIN;
+        if(i == C) 
+            for(j=0; j<P; j++) 
+                if(!strcmp(P_CMDS[j], name)) 
+                    break;
+
+        if((i != C || j != P)){ 
+            printf("the name %s is reserved\n", chameleon(name, 15));
+            goto BEGINING;
         }
+        else break;
     }
+
+    return 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -189,14 +200,12 @@ struct response send(struct request req){
 
     // enviar dados ao servidor
     write(server_fifo, &req, sizeof(req));
-    _puts("wait", 8);
 
     // abrir fifo privado em modo de leitura
     if((client_fifo = open(req.fifo, O_RDONLY)) < 0){
         perror(req.fifo);
         exit(-1);
     }
-
     // ler dados
     read(client_fifo, &res, sizeof(res));
 
@@ -209,25 +218,15 @@ struct response send(struct request req){
 // ----------------------------------------------------------------------------
 // SHUTDOWN shuts down server and exits
 void shutdown(int spid){
-    _printf(8, "kill -%d  %d [%d]\n", SIGUSR2, spid, kill(spid, SIGUSR2));
-    
-    //TODO check status
-    
-    cleanup();
+    kill(spid, SIGUSR2);
+    //sprintf(leonbuffer, "kill -%d  %d [%d]\n", SIGUSR2, spid, kill(spid, SIGUSR2));
+    //puts(chameleon(leonbuffer, 8));
+    //TODO check status?
+    sleep(1);
 }
 
 // ----------------------------------------------------------------------------
-// RESTART
-void restart(char proc[]){
-    int pid = getzpid(proc);
-    _printf(8, "%s is restarting\n", proc);
-    shutdown(pid);
-    sleep(1);// give 1 sec for the process to terminate
-    start(SERVER);
-}
-
-// ----------------------------------------------------------------------------
-// START starts a process
+// START (starts a process)
 void start(char proc[]){
     _printf(8, "starting %s\nwait\n", proc);
     system(proc);
@@ -235,7 +234,7 @@ void start(char proc[]){
 }
 
 //-----------------------------------------------------------------------------
-// PLAY SIGUSR1 handler
+// PLAY (game play) SIGUSR1 handler
 void play(int sig){
     struct move status;
     int len;
@@ -246,7 +245,7 @@ void play(int sig){
         return;
     }
 
-    // ler dados
+    // [6] ler dados
     read(client_fifo, &status, sizeof(status));
     // fechar o fifo do cliente
     close(client_fifo);
@@ -261,31 +260,43 @@ void play(int sig){
 }
 
 //-----------------------------------------------------------------------------
-// QUIT SIGUSR2 handler to quit
+// QUIT closes client (SIGUSR2 handler)
 void quit(int sig){
     int i = 4;
-
-    _puts("\nthe server is shutting down", 3);
+    puts(chameleon("the server is shutting down", 3));
     sleep(1);// 1 sec before terminating
-    _puts("terminated", 5);
+    puts(chameleon("client terminated", 5));
     fflush(stdout);
     exit(cleanup());
 }
 
 //-----------------------------------------------------------------------------
-// closes server's FIFO and deletes client's FIFO 
 int cleanup(){
     close(server_fifo);
     unlink(req.fifo);
     return 1;
 }
 
-//-----------------------------------------------------------------------------
-// is playing?
-int is_playing(){
+int is_playing(char buffer[]){
     if(!playing) {
-        _puts("you are not playing", 4);
-        return -1;
+        strcpy(buffer, chameleon("you aren't playing",4));
+        return 0;
     }
+
     return 1;
+}
+
+// executa o servidor se o seu FIFO não existir
+void status(int argc, char *argv[]){
+    if(!getzpid(SERVER)) {
+         if(argc > 1 && strcmp(argv[1], "admin") == 0) start(SERVER);
+         else {
+             puts("the server is not running");
+             exit(1);
+         }
+    }
+    else if(access(DOMINOS, F_OK)) {
+        puts("can't access the server's FIFO");
+        exit(1);
+    }    
 }
