@@ -70,7 +70,8 @@ int main(int argc, char *charv[]){
                     res = k==1? play_game(req): play_tile(req);
                     break;
                 case 7:// quit 
-                    res = leaves(req);
+                    res = giveup(req);
+                    //res = leaves(req);
                     break;
                 case 11:// games 
                     res = list_games(req);

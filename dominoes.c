@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include "public.h"
-#include "zelib.h"
+//#include "zelib.h"
 #include "client.c"
 
 //-----------------------------------------------------------------------------
@@ -30,9 +30,9 @@ int main(int argc, char *argv[]){
     }
     
     // assume-se que o servidor está a correr...
-    LOGIN:
     clear();
-
+    LOGIN:
+    
     // authenticate or exit
     if(!auth(req.name)) return cleanup();
 
@@ -46,12 +46,13 @@ int main(int argc, char *argv[]){
     // send login request
     res = send(req);
     
-    // login rejected
-    if(!res.cmd){
+    // login was rejected
+    if(!res.cmd) {
         puts(chameleon(res.msg, 4));
         goto LOGIN;
     }
-
+  
+    // update user's request form
     req = res.req;
     
     sprintf(buffer, "welcome, %s", req.name);

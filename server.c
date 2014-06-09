@@ -93,7 +93,7 @@ void show(int sig){
     char msg[256];
     int n;
 
-    printf("\nGAMES:");
+    printf("\nGAMES");
     if(game == NULL) puts(" (no games)");
     else while(game != NULL){
         printf("\n%d %s", game->id, game->name);
@@ -113,7 +113,7 @@ void show(int sig){
     }
     
     // users
-    printf("\nUSERS:\n");
+    printf("\nUSERS\n");
     players_string(msg);
     puts(msg);
 
@@ -131,7 +131,7 @@ struct response status(struct request req){
     int n;
     msg[0]='\0';
 
-    strcpy(res.msg, "GAME STATUS:");
+    strcpy(res.msg, "GAME STATUS");
     
     if(game == NULL) strcat(res.msg, " (no games)");
     else while(game != NULL){
@@ -175,8 +175,8 @@ void players_string(char string[]){
     char line[64], status[16];
     line[0] = string[0] = '\0';
     while(node != NULL){
-        sprintf(line, "%d %s %s wins:%d",
-            node->id, node->name, node->fifo, node->wins);
+        sprintf(line, "%d %s %d wins:%d",
+            node->id, node->name, node->pid, node->wins);
         strcat(string, line);
         if(node->prev != NULL) strcat(string, "\n");       
         node = node->prev;
@@ -304,6 +304,8 @@ struct response play_game(struct request req){
     // available game
     else if(!games->done){
         sprintf(res.msg, "subscribed to '%s'", games->name);
+        //               "game will start in %d seconts"
+
         if(games->start_t == 0) {
             user = get_player_by_id(req.player_id, players);
             node.id = user->id;
@@ -358,7 +360,7 @@ struct response info(struct request req){
     string[0] = '\0';
 
     if(games == NULL || games->done) {
-        strcpy(res.msg, "no game playing");
+        strcpy(res.msg, "there's no playing game");
         res.cmd = 0;
         return res;
     }
@@ -389,7 +391,7 @@ struct response player_tiles(struct request req){
     struct response res = resdef(1, "OK tiles", req);
     struct player *player = get_player_by_name(req.name, games->players);
     char hand[128];
-    sprintf(res.msg, "%s, your dominoes", player->name);   
+    strcpy(res.msg, "your tiles");   
     tiles_string(hand, player->tiles);
     strcat(res.msg, hand);
     return res;
@@ -497,7 +499,7 @@ struct response play_tile(struct request req){
             move.turn = -1;
         }
         else {
-            sprintf(string, "\033[0m\nwaiting for \033[0;32m%s\033[0m to play", playing->name);
+            sprintf(string, "\nwaiting for %s to play", chameleon(playing->name, 3));
             strcat(move.msg, string);
         }
 
@@ -665,6 +667,7 @@ struct response help(struct request req){
 // EXIT/LOGOUT leaves
 struct response leaves(struct request req){
     struct response res = giveup(req);
+    
     // delete user
     players = delete_player_by_name(req.name, players);
     strcpy(res.msg, "OK bye");
@@ -698,7 +701,7 @@ struct response giveup(struct request req){
             games->players = delete_player_by_name(req.name, games->players);
 
             // set move message
-            sprintf(move.msg, "\n%s quit", req.name);
+            sprintf(move.msg, "\n%s quits", req.name);
 
             if(count_players() < 2){
                 sprintf(move.msg, "%s\n\033[0;35m%s Wins!\033[0m", move.msg, playing->name);
@@ -723,6 +726,10 @@ struct response giveup(struct request req){
             // inform
             buzz(1);
         }
+    }
+    else {
+        strcpy(res.msg, "you're not in a game");
+        res.cmd = 0;
     }
 
     return res;
@@ -783,23 +790,21 @@ void init(int sig){
                 if((player_fifo = open(player->fifo,O_WRONLY|O_NDELAY)) == -1){
                   sleep(5);
                 }
-                else {        
+                else {
+                    move.turn = 1;
                     move.msg[0] = '\0';
                     tile[0] = '\0';
-                    strcpy(move.msg, "Starting ");
-                    strcat(move.msg, games->name);                    
-                    sprintf(hand, "\n\033[0;32m%s, your dominoes", 
-                        player->name);
-                    strcat(move.msg, hand);
-                    hand[0] = '\0';
+
+                    sprintf(move.msg, "\nstarting %s", games->name);                   
+                    strcat(move.msg, chameleon("\nyour dominoes", 2));
+
                     tiles_string(hand, player->tiles);
-                    strcat(move.msg, hand);  
-                    move.turn = 1;
-                    sprintf(hand, 
-                        "\033[0m\nwaiting for \033[0;32m%s\033[0m to play",
-                        playing->name);
-                    strcat(move.msg, hand);  
+                    strcat(move.msg, chameleon(hand, 2));  
                     
+                    sprintf(hand, "\nwaiting for %s to play", 
+                        chameleon(playing->name, 3));
+                    strcat(move.msg, hand);
+                                        
                     // enviar resposta pelo FIFO do jogador
                     write(player_fifo, &move, sizeof(move));
                     close(player_fifo);
@@ -874,7 +879,7 @@ void tiles_string(char string[], struct domino *tiles){
     char tile[16] = {'\0'};
     string[0] = '\0';
 
-    if(tiles == NULL) strcpy(string, "[]");
+    if(tiles == NULL) strcpy(string, "\n[]");
     else while(tiles != NULL){
         sprintf(tile, "\n%2d:[%d,%d]", tiles->id, tiles->mask[0], 
             tiles->mask[1]);

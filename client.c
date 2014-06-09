@@ -17,20 +17,7 @@ int cleanup();
 int playing = false;
 int is_playing();
 void status(int argc, char *argv[]);
-int help(char buffer[]){
-    //char block[256];
-    char c;
-    int in, n;
-
-    in = open("help.txt", O_RDONLY);
-    while(read(in, &c, sizeof(c)) == 1){
-        write(2, &c, sizeof(c));
-    }
-
-    close(in);
-
-    return 0;
-}
+int help(char buffer[]);
 //-----------------------------------------------------------------------------
 //                                                                     client.h
 // TODO split - - - > - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -132,14 +119,14 @@ int validate(char command[], char buffer[]){
             case 2:// game*
             case 4:// get
             case 5:// pass
-            case 6:// help
+            //case 6:// help
             case 7:// giveup*
             case 8:// hint
                 return is_playing(buffer);
 
-            case 69: 
+            case 6: 
                 printf("type %s for help on choosing a tile to play\n", 
-                    chameleon("hint", 15));
+                    chameleon("hint", 5));
                 return help(buffer);
 
             // players (list)
@@ -299,4 +286,18 @@ void status(int argc, char *argv[]){
         puts("can't access the server's FIFO");
         exit(1);
     }    
+}
+
+int help(char buffer[]){
+    char c;
+    int in, n;
+
+    in = open("HELP", O_RDONLY);
+    while(read(in, &c, sizeof(c)) == 1){
+        write(2, &c, sizeof(c));
+    }
+
+    close(in);
+
+    return 0;
 }
