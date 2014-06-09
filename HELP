@@ -1,0 +1,19 @@
+DOMINOES HELP
+exit        terminates the program
+logout      terminates the user session
+status      displays game status
+users       lists all users logged in
+new name i  creates a game that accepts players during i seconds
+play        joins the open game
+quit        quits the game where playing
+info        displays the live game status
+game        para mostrar o mosaico do jogo
+play i [left|right]
+            places tile i on the mosaic
+get         gets a tile from the dominoes stock
+pass        passes turn to play
+giveup      same as quit
+start       starts server
+players     lists last players
+games       lists all games
+shutdown    stops server and exits
