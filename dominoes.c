@@ -31,18 +31,21 @@ int main(int argc, char *argv[]){
     
     // assume-se que o servidor está a correr...
     clear();
+
+    puts(chameleon("DOMINOES", 15));
+    //fflush(stdout);
     LOGIN:
     
-    // authenticate or exit
-    if(!auth(req.name)) return cleanup();
-
     // reset login data
     strcpy(req.cmd, "login");
     req.pid = getpid();
     req.player_id = 0;
-    res.msg[0] = '\0';
+    res.msg[0] = req.name[0] = '\0';
     res.cmd = 0;
-    
+
+    // authenticate or exit
+    if(!auth(req.name)) return cleanup();
+
     // send login request
     res = send(req);
     

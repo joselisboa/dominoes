@@ -103,7 +103,6 @@ int validate(char command[], char buffer[]){
 
         case 9:// shutdown
             kill(getzpid(SERVER), SIGUSR2);
-            //shutdown(getzpid(SERVER));
             sleep(1);
             return -1;
 
@@ -119,17 +118,16 @@ int validate(char command[], char buffer[]){
             case 2:// game*
             case 4:// get
             case 5:// pass
-            //case 6:// help
             case 7:// giveup*
             case 8:// hint
-                return is_playing(buffer);
+                return 1;
 
             case 6: 
                 printf("type %s for help on choosing a tile to play\n", 
                     chameleon("hint", 5));
                 return help(buffer);
 
-            // players (list)
+            // list players
             case 9: return 1;
             default: 
                 strcpy(buffer, chameleon("don't know ", 4));
@@ -144,19 +142,19 @@ int validate(char command[], char buffer[]){
 // ----------------------------------------------------------------------------
 // prompts player's name
 int auth(char name[]){
-    char buffer[32];
-    int i=C, j=P, r = 0;
+    char c = '\0', buffer[32];
+    int i=C, j=P, k, r = 0;
 
-    puts(chameleon("DOMINOES", 15));
-    fflush(stdout);
-
-    while(!r){
+    while(r < 1){
     BEGINING:   
         puts(chameleon("enter your name", 3));
         printf("> ");
+        //fflush(stdin);
+        //__fpurge(stdin);
         scanf(" %[^\n]", buffer);
+
         r = sscanf(buffer, " %s", name);
-        
+
         if(!strcmp(name, "exit")) return 0;
 
         // client commands
@@ -251,14 +249,15 @@ void play(int sig){
 void quit(int sig){
     int i = 4;
     puts(chameleon("the server is shutting down", 3));
-    sleep(1);// 1 sec before terminating
-    puts(chameleon("client terminated", 5));
+    puts(chameleon("client will terminate now", 4));
+    sleep(1);// 1 sec before terminating    
     fflush(stdout);
     exit(cleanup());
 }
 
 //-----------------------------------------------------------------------------
 int cleanup(){
+    puts(chameleon("bye", 3));
     close(server_fifo);
     unlink(req.fifo);
     return 1;
@@ -266,7 +265,7 @@ int cleanup(){
 
 int is_playing(char buffer[]){
     if(!playing) {
-        strcpy(buffer, chameleon("you aren't playing",4));
+        strcpy(buffer, chameleon("you're not in a game",4));
         return 0;
     }
 
