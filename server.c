@@ -1,49 +1,45 @@
 #define A 2 
 
-void init(int sig);
-void inform(int sig);
-void stop(int sig);
-void show(int sig);
-void buzz(int t);
+void init(int);
+void inform(int);
+void stop(int);
+void show(int);
+void buzz(int);
 int blocked();
-
 int cleanup();
 int procs();
 int count_players();
-int send(struct response res, struct request req);
-
-struct response leaves(struct request req);
-struct response status(struct request req);
-struct response users(struct request req);
-struct response add_game(struct request req);
-struct response list_games(struct request req);
-struct response list_players(struct request req);
-struct response play_tile(struct request req);
-struct response leaves(struct request req);
-struct response login(struct request req);
-struct response info(struct request req);
-struct response player_tiles(struct request req);
-struct response info(struct request req);
-struct response game_tiles(struct request req);
-struct response play_game(struct request req);
-struct response get(struct request req);
-struct response pass(struct request req);
-struct response help(struct request req);
-struct response giveup(struct request req);
-struct response ni(struct request req);
-struct response resdef(int cmd, char msg[], struct request req);
-
-struct game *games = NULL;
+int send(struct response, struct request);
+struct response player_tiles(struct request);
+struct response game_tiles(struct request);
+struct response play_tile(struct request);
+struct response play_game(struct request);
+struct response giveup(struct request);
+struct response leaves(struct request);
+struct response login(struct request);
+struct response info(struct request);
+struct response info(struct request);
+struct response get(struct request);
+struct response pass(struct request);
+struct response help(struct request);
+struct response ni(struct request);
+struct response users(struct request);
+struct response leaves(struct request);
+struct response status(struct request);
+struct response add_game(struct request);
+struct response list_games(struct request);
+struct response list_players(struct request);
+struct response router(struct request, struct response);
+struct response resdef(int, char [], struct request);
 struct player *players = NULL;
 struct player *playing = NULL;
+struct game *games = NULL;
 struct move move;
-
 int client_fifo, server_fifo;// important!
-
-void players_string(char string[]);
-void games_string(char string[]);
-void tiles_string(char string[], struct domino *tiles);
-void mosaic_string(char string[]);
+void players_string(char []);
+void games_string(char []);
+void tiles_string(char [], struct domino *);
+void mosaic_string(char []);
 
 //TODO move to public.h
 char messages[8][32] = {
@@ -60,6 +56,54 @@ char messages[8][32] = {
 //                                                                     server.h
 //TODO split file  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
 //                                                                     server.c
+//-----------------------------------------------------------------------------
+// request router
+struct response router(struct request req, struct response res){
+    char action[8], param2[8];
+    int n, i, param1;
+
+    // parse client request
+    n = sscanf(req.cmd, "%s %d %s", action, &param1, param2);
+    
+    for(i=0; i<C; i++) 
+        if(strcmp(C_CMDS[i], action) == 0) 
+            break;
+    
+    // client commands
+    switch(i) {
+        case 0: return login(req);
+        case 1:// exit
+        case 2: return leaves(req);// logout   
+        case 3: return status(req);        
+        case 4: return users(req);
+        case 5: return add_game(req);// new
+        case 6: return (n == 1) ? play_game(req) : play_tile(req);
+        case 7: return giveup(req);
+        case 11: return list_games(req);
+        default: 
+            for(i=0; i<P; i++) 
+                if(strcmp(P_CMDS[i], action) == 0) 
+                    break;
+
+        // Players commands
+        switch (i) {
+            case 1: return info(req);
+            case 0: return player_tiles(req); 
+            case 2: return game_tiles(req);
+            case 4: return get(req);
+            case 5: return pass(req);
+            case 8:// hint
+            case 6: return help(req);
+            case 7: return giveup(req);
+            case 9: return list_players(req);
+            default: 
+                res = ni(req);
+                res.cmd = 0;
+                return res;
+        }
+    }
+}
+
 //-----------------------------------------------------------------------------
 // Blocked, none of the players have a tile that fits the mosaic
 int blocked(){
