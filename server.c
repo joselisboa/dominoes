@@ -44,6 +44,18 @@ void players_string(char string[]);
 void games_string(char string[]);
 void tiles_string(char string[], struct domino *tiles);
 void mosaic_string(char string[]);
+
+//TODO move to public.h
+char messages[8][32] = {
+    "there's no live game",
+    "create a game first",
+    "you're not in a game",
+    "there aren't any games",//3
+    "there aren't any players",
+    "can't satisfy",
+    "it's not your turn",
+     "you are already playing"
+};
 //-----------------------------------------------------------------------------
 //                                                                     server.h
 //TODO split file  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
@@ -190,7 +202,7 @@ struct response list_games(struct request req){
     char msg[512];
     if(games == NULL){
         res.cmd = 0;
-        strcpy(res.msg, "there aren't any games");
+        strcpy(res.msg, messages[3]);
         return res;
     }
     games_string(msg);
@@ -231,9 +243,9 @@ struct response list_players(struct request req){
     char msg[512] = {'\0'};
     char line[64] = {'\0'};
     
-    if(games == NULL){
+    if(games == NULL || games->done){
         res.cmd = 0;
-        strcpy(res.msg, "there aren't any players");
+        strcpy(res.msg, messages[0]);
         return res;
     }
     
@@ -257,7 +269,7 @@ struct response add_game(struct request req){
     name[0] = '\0';
 
     if(games != NULL && !games->done) {
-        strcpy(res.msg, "there's a live game");
+        strcpy(res.msg, messages[0]);
         res.cmd = 0;
         return res;
     }
@@ -283,7 +295,7 @@ struct response play_game(struct request req){
 
     // there are no games
     if(games == NULL){
-        strcpy(res.msg, "create a game first");
+        strcpy(res.msg, messages[1]);
         res.cmd = 0;
         return res;
     }
@@ -293,7 +305,7 @@ struct response play_game(struct request req){
     // player already subscribed?
     player = get_player_by_name(req.name, games->players);
     if(player != NULL){
-        if(games->start_t) strcpy(res.msg, "you are already playing");
+        if(games->start_t) strcpy(res.msg, messages[7]);
         else if(games->done) sprintf(res.msg,"'%s' expired", games->name);
         else sprintf(res.msg, "you already subscribed to '%s'", games->name);
         
@@ -360,7 +372,7 @@ struct response info(struct request req){
     string[0] = '\0';
 
     if(games == NULL || games->done) {
-        strcpy(res.msg, "there's no playing game");
+        strcpy(res.msg, "there's no live game");
         res.cmd = 0;
         return res;
     }
@@ -401,11 +413,18 @@ struct response player_tiles(struct request req){
 // GAME response with mosaic tiles
 struct response game_tiles(struct request req){
     struct response res = resdef(1, "OK tiles", req);
-    struct game *node = games;
     char hand[128];
-    sprintf(res.msg, "%s's mosaic\n", node->name);   
-    mosaic_string(hand);
-    strcat(res.msg, hand);
+    
+    if(games != NULL && !games->done){
+        sprintf(res.msg, "%s's mosaic\n", games->name);
+        mosaic_string(hand);
+        strcat(res.msg, hand);
+    }
+    else {
+        strcpy(res.msg, messages[0]);
+        res.cmd = 0;
+    } 
+
     return res;
 }
 
@@ -526,20 +545,20 @@ struct response get(struct request req){
     int mask[2];
 
     if(games == NULL || games->players == NULL || games->done) {
-        strcpy(res.msg, "can't satisfy");
+        strcpy(res.msg, messages[5]);
         res.cmd = 0;
         return res;        
     }
 
     player = get_player_by_name(req.name, games->players);
     if(player == NULL){
-        strcpy(res.msg, "can't satisfy");
+        strcpy(res.msg, messages[5]);
         res.cmd = 0;
         return res;
     }
 
     if(player != playing){
-        strcpy(res.msg, "it's not your turn");
+        strcpy(res.msg, messages[6]);
         res.cmd = 0;
         return res;
     }
@@ -577,20 +596,20 @@ struct response pass(struct request req){
     struct domino *tile = NULL;
 
     if(games == NULL || games->players == NULL || games->done) {
-        strcpy(res.msg, "can't satisfy");
+        strcpy(res.msg, messages[5]);
         res.cmd = 0;
         return res;        
     }
 
     player = get_player_by_name(req.name, games->players);
     if(player == NULL){
-        strcpy(res.msg, "can't satisfy");
+        strcpy(res.msg, messages[5]);
         res.cmd = 0;
         return res;
     }
 
     if(player != playing){
-        strcpy(res.msg, "it's not your turn");
+        strcpy(res.msg, messages[6]);
         res.cmd = 0;
         return res;
     }
@@ -617,20 +636,20 @@ struct response help(struct request req){
     int mask[2];
 
     if(games == NULL || games->players == NULL || games->done) {
-        strcpy(res.msg, "can't satisfy");
+        strcpy(res.msg, messages[5]);
         res.cmd = 0;
         return res;        
     }
 
     player = get_player_by_name(req.name, games->players);
     if(player == NULL){
-        strcpy(res.msg, "can't satisfy");
+        strcpy(res.msg, messages[5]);
         res.cmd = 0;
         return res;
     }
     
     if(player != playing){
-        strcpy(res.msg, "it's not your turn");
+        strcpy(res.msg, messages[6]);
         res.cmd = 0;
         return res;
     }
@@ -728,7 +747,7 @@ struct response giveup(struct request req){
         }
     }
     else {
-        strcpy(res.msg, "you're not in a game");
+        strcpy(res.msg, messages[2]);
         res.cmd = 0;
     }
 
