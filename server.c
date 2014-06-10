@@ -24,7 +24,6 @@ struct response pass(struct request);
 struct response help(struct request);
 struct response ni(struct request);
 struct response users(struct request);
-struct response leaves(struct request);
 struct response status(struct request);
 struct response add_game(struct request);
 struct response list_games(struct request);
@@ -33,6 +32,7 @@ struct response router(struct request, struct response);
 struct response resdef(int, char [], struct request);
 struct player *players = NULL;
 struct player *playing = NULL;
+struct player *last_move = NULL;
 struct game *games = NULL;
 struct move move;
 int client_fifo, server_fifo;// important!
@@ -246,8 +246,8 @@ void players_string(char string[]){
     char line[64], status[16];
     line[0] = string[0] = '\0';
     while(node != NULL){
-        sprintf(line, "%d %s %d wins:%d",
-            node->id, node->name, node->pid, node->wins);
+        sprintf(line, "%d %s %s wins:%d",
+            node->id, node->name, node->fifo, node->wins);
         strcat(string, line);
         if(node->prev != NULL) strcat(string, "\n");       
         node = node->prev;
@@ -554,10 +554,11 @@ struct response play_tile(struct request req){
             goto DELIVERY;
         }
 
-        // next player//playing_next();
+        // next player//playing_next();      
         n = count_players();
         for(i=0; i<n; i++) if(strcmp(playing->name, move.players[i]) == 0){
             j = (i+1 == n) ? 0 : i + 1;
+            last_move = playing;
             playing = get_player_by_name(move.players[j], games->players);
             move.turn = j;
             break;
@@ -584,7 +585,8 @@ struct response play_tile(struct request req){
         }
 
         DELIVERY:
-        sprintf(res.msg, "you placed tile %d", tile_id);
+        sprintf(res.msg, "you played tile %d:[%d,%d]", 
+            tile_id, tile->mask[0], tile->mask[1]);
 
         buzz(1);
     }
@@ -676,6 +678,7 @@ struct response pass(struct request req){
     }
 
     // set next playing
+    last_move = playing;
     playing = playing_next();
 
     sprintf(move.msg, 
@@ -727,14 +730,15 @@ struct response help(struct request req){
     while(tile != NULL){
         // tests if a tile fits in the mosaic
         if(validate_tile(mask, tile)){
-            sprintf(item, "\033[0;35m%2d:[%d,%d]\033[0m", 
+            sprintf(item, "\033[0;35m%2d:[%d,%d]\033[0m\n", 
                 tile->id, tile->mask[0], tile->mask[1]);
             strcat(res.msg, item);
-            if(tile->next != NULL) strcat(res.msg, "\n");
         }
         tile = tile->next;
     }
     
+    res.msg[strlen(res.msg)-1] = '\0';
+
     if(res.msg[0] == '\0') {
         strcpy(res.msg, "you have nothing");
         res.cmd = 0;
@@ -775,7 +779,10 @@ struct response giveup(struct request req){
             append_tiles(games->tiles, player->tiles);
            
             // set next playing player
-            if(playing == player) playing = playing_next();
+            if(playing == player) {
+                last_move = playing;
+                playing = playing_next();
+            }
             
             // delete player
             games->players = delete_player_by_name(req.name, games->players);
@@ -988,25 +995,28 @@ void mosaic_string(char string[]){
 void inform(int sig){
     struct player *node, *player = games->players;
     int player_fifo;
-    int done, k, i=0, n = count_players();
+    int deliver, done, k, i=0, n = count_players();
 
     // enviar dados aos jogadores do jogo
     player = games->players;
     while(player != NULL){
-        kill(player->pid, SIGUSR1);
-        done = 0;
-        k = 0;
-        do {// abrir FIFO do jogador em modo de escrita
-            if((player_fifo = open(player->fifo, 
-                O_WRONLY|O_NDELAY)) == -1)
-                sleep(5);
-            else {
-                write(player_fifo, &move, sizeof(move));
-                close(player_fifo);
-                sleep(1); // sleep existe, gostem ou não
-                done = 1;
-            }
-        } while(k++ < 5 && !done);    
+        deliver = games->done ? TRUE : (player != last_move);
+        if(deliver){
+            kill(player->pid, SIGUSR1);
+            done = 0;
+            k = 0;
+            do {// abrir FIFO do jogador em modo de escrita
+                if((player_fifo = open(player->fifo, 
+                    O_WRONLY|O_NDELAY)) == -1)
+                    sleep(5);
+                else {
+                    write(player_fifo, &move, sizeof(move));
+                    close(player_fifo);
+                    sleep(1); // sleep existe, gostem ou não
+                    done = 1;
+                }
+            } while(k++ < 5 && !done);          
+        }
         player = player->prev;
     }
     return;
