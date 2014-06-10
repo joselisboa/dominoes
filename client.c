@@ -4,20 +4,21 @@ int server_fifo, client_fifo;
 struct request req;
 struct response res;
 
-void play(int sig);
-void quit(int sig);
-void print_response(struct response res);
+void play(int);
+void quit(int);
+void print_response(struct response);
 int auth(char name[]);//, char *prompt[], char *format[]){
-struct response send(struct request req);
-void shutdown(int spid);
-void start(char proc[]);
-int validate(char command[], char buffer[]);
-int cleanup();
+struct response send();
+void shutdown(int);
+void start(char []);
+int validate(char [], char []);
+int cleanup(char []);
+void reset();
 
 int playing = false;
 int is_playing();
-void status(int argc, char *argv[]);
-int help(char buffer[]);
+void status(int, char *[]);
+int help(char []);
 //-----------------------------------------------------------------------------
 //                                                                     client.h
 // TODO split - - - > - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -123,8 +124,14 @@ int validate(char command[], char buffer[]){
                 return 1;
 
             case 6: 
-                printf("type %s for help on choosing a tile to play\n", 
-                    chameleon("hint", 5));
+                strcpy(buffer, chameleon("type ", 5));
+                strcat(buffer, chameleon("hint", 13));
+                strcat(buffer, 
+                    chameleon(" for help on picking a tile", 5));
+                
+                puts(buffer);
+                buffer[0] = '\0';
+
                 return help(buffer);
 
             // list players
@@ -142,33 +149,69 @@ int validate(char command[], char buffer[]){
 // ----------------------------------------------------------------------------
 // prompts player's name
 int auth(char name[]){
-    char c = '\0', buffer[32];
-    int i=C, j=P, k, r = 0;
+    char c = '\0', buffer[32], lname[32];
+    int i=C, j=P, k, l, n=0;
 
-    while(r < 1){
+    // clear screen
+    clear();
+    
+    puts(chameleon("DOMINOES", 15));
+
+    // reset login data
+    reset();
+
+    while(TRUE){
     BEGINING:   
-        puts(chameleon("enter your name", 3));
-        printf("> ");
-        //fflush(stdin);
-        //__fpurge(stdin);
-        scanf(" %[^\n]", buffer);
+        printf("%s\n> ", chameleon("enter your name", 3));
+        fflush(stdout);
+        
+        //scanf(" %[^\n]", buffer);
+        while(read(0, &c, 1) >  0)
+            if(c != '\n' && n < 31) buffer[n++] = c;
+            else break;        
+        buffer[n] = '\0';
+        n=0;
 
-        r = sscanf(buffer, " %s", name);
+        if(strlen(buffer) < 1) {
+            puts(chameleon("if you don't give your name, you can't have any pudin!", 4));
+            puts(chameleon("how can you have any pudin, if you don't give your name?", 4));
 
-        if(!strcmp(name, "exit")) return 0;
+            goto BEGINING;
+        }
+
+        sscanf(buffer, " %s", name);
+
+        for(k=0; k < strlen(name); k++){
+             l = name[k];
+             //printf("%d:%c\n", l, l);
+             if((l<48 || l>122)
+                || (l>57 && l<65)
+                || (l>90 && l<97)){
+                if(l != 95) {
+                    puts(chameleon("please enter a valid name", 4));                   
+                    goto BEGINING;
+                }
+            }           
+        }
+
+        // lowercased name
+        for(k=0; k < strlen(name); k++) lname[k] = tolower(name[k]);
+        lname[k] = '\0';
+
+        if(!strcmp(lname, "exit")) return 0;
 
         // client commands
         for(i=0; i<C; i++) 
-            if(!strcmp(C_CMDS[i], name))
+            if(!strcmp(C_CMDS[i], lname))
                 break;
 
         // player commands
         if(i == C) 
             for(j=0; j<P; j++) 
-                if(!strcmp(P_CMDS[j], name)) 
+                if(!strcmp(P_CMDS[j], lname)) 
                     break;
 
-        if((i != C || j != P)){ 
+        if((i != C || j != P)){
             printf("the name %s is reserved\n", chameleon(name, 15));
             goto BEGINING;
         }
@@ -180,8 +223,8 @@ int auth(char name[]){
 
 //-----------------------------------------------------------------------------
 // sends request to server
-struct response send(struct request req){
-    struct response res;
+struct response send(){
+    //struct response res;
 
     // enviar dados ao servidor
     write(server_fifo, &req, sizeof(req));
@@ -248,21 +291,24 @@ void play(int sig){
 // QUIT closes client (SIGUSR2 handler)
 void quit(int sig){
     int i = 4;
-    puts(chameleon("the server is shutting down", 3));
+    puts("the server is shutting down");
     puts(chameleon("client will terminate now", 4));
     sleep(1);// 1 sec before terminating    
     fflush(stdout);
-    exit(cleanup());
+    exit(cleanup("bye"));
 }
 
 //-----------------------------------------------------------------------------
-int cleanup(){
-    puts(chameleon("bye", 3));
+// closes the public fifo and deletes the private fifo
+int cleanup(char msg[]){
+    puts(chameleon(msg, 3));
     close(server_fifo);
     unlink(req.fifo);
     return 1;
 }
 
+//-----------------------------------------------------------------------------
+// is the user playing a dominoes game?
 int is_playing(char buffer[]){
     if(!playing) {
         strcpy(buffer, chameleon("you're not in a game",4));
@@ -272,6 +318,7 @@ int is_playing(char buffer[]){
     return 1;
 }
 
+//-----------------------------------------------------------------------------
 // executa o servidor se o seu FIFO não existir
 void status(int argc, char *argv[]){
     if(!getzpid(SERVER)) {
@@ -287,6 +334,8 @@ void status(int argc, char *argv[]){
     }    
 }
 
+//-----------------------------------------------------------------------------
+// displays HELP file
 int help(char buffer[]){
     char c;
     int in, n;
@@ -299,4 +348,14 @@ int help(char buffer[]){
     close(in);
 
     return 0;
+}
+
+//-----------------------------------------------------------------------------
+// resets/clears user data
+void reset(){
+    strcpy(req.cmd, "login");
+    req.pid = getpid();
+    req.player_id = 0;
+    res.msg[0] = req.name[0] = '\0';
+    res.cmd = 0;
 }

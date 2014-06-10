@@ -1,12 +1,11 @@
 #include <stdlib.h>
 #include "public.h"
-//#include "zelib.h"
 #include "client.c"
 
-//-----------------------------------------------------------------------------
 // DOMINOES Lab Work for SO (Operating Systems)
 int main(int argc, char *argv[]){
-    char buffer[256];
+    char c, buffer[256];
+    int n = 0;
 
     // set signal handlers
     signal(SIGUSR1, play);  
@@ -17,37 +16,18 @@ int main(int argc, char *argv[]){
 
     // create the private fifo (client)
     sprintf(req.fifo, "%s_%d", FIFOPATH, getpid());
-    if(mkfifo(req.fifo, 0666) < 0){
-        perror(req.fifo);
-        exit(1);
-    }
+    if(mkfifo(req.fifo, 0666) < 0) exit(1);
 
     // open the public fifo (server) in read only mode
-    if((server_fifo = open(DOMINOS, O_WRONLY)) < 0){
-        unlink(req.fifo);
-        perror(DOMINOS);
-        exit(1);
-    }
+    if((server_fifo = open(DOMINOS, O_WRONLY)) < 0) exit(unlink(req.fifo));
     
-    // assume-se que o servidor está a correr...
-    clear();
-
-    puts(chameleon("DOMINOES", 15));
-    //fflush(stdout);
     LOGIN:
     
-    // reset login data
-    strcpy(req.cmd, "login");
-    req.pid = getpid();
-    req.player_id = 0;
-    res.msg[0] = req.name[0] = '\0';
-    res.cmd = 0;
-
     // authenticate or exit
-    if(!auth(req.name)) return cleanup();
+    if(!auth(req.name)) exit(cleanup("bye"));
 
-    // send login request
-    res = send(req);
+    // send login request to server
+    send();
     
     // login was rejected
     if(!res.cmd) {
@@ -55,14 +35,14 @@ int main(int argc, char *argv[]){
         goto LOGIN;
     }
   
-    // update user's request form
+    // update request form
     req = res.req;
     
     sprintf(buffer, "welcome, %s", req.name);
     strcpy(buffer, chameleon(buffer, 3));
 
     // request loop
-    while(TRUE){
+    while(TRUE){     
         // output to user
         if(buffer[0] != '\0'){
             write(2, buffer, strlen(buffer));
@@ -71,14 +51,19 @@ int main(int argc, char *argv[]){
 
         write(2, "\n> ", 3);
 
-        // input from user (request)
-        scanf(" %[^\n]", req.cmd);
+        // input from user
+         while(read(0, &c, 1) >  0)
+            if(c != '\n' && n < 63) req.cmd[n++] = c;
+            else break;
+        
+        req.cmd[n] = '\0';
+        n = 0;
 
         // validate request or prompt again
         if(!validate(req.cmd, buffer)) continue;
 
         // send request
-        res = send(req);
+        send();
 
         // copy the response message to the buffer
         strcpy(buffer, chameleon(res.msg, res.cmd?2:4));
@@ -90,5 +75,5 @@ int main(int argc, char *argv[]){
         if(!strncmp("exit", req.cmd, 3)) break;
     }
     
-    return cleanup();
+    exit(cleanup("bye"));
 }
