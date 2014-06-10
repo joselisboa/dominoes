@@ -204,14 +204,9 @@ struct player *get_player_by_id(int id, struct player *players){
 
 struct player *get_player_by_name(char name[], struct player *players){
 	struct player *aux_player = players;
-
-//printf("getting player %s\n", name);
-
     while(aux_player != NULL){
-        if(strcmp(name, aux_player->name) == 0) {
-//printf("found player %s\n", aux_player->name);
+        if(strcmp(name, aux_player->name) == 0)
             return aux_player;
-        }
         aux_player = aux_player->prev;
     }
 
@@ -482,26 +477,23 @@ struct domino *place_tile2(struct domino *tile, struct game *head_game, int pos)
 	// head tile
 	mosaic_tile = head_game->mosaic;
 	player_tile = tile;
-
-//********
-if(!pos){
-	// o dominó encaixa à esquerda
-	mask = mosaic_tile->mask[0];
-	if(player_tile->mask[0] == mask || player_tile->mask[1] == mask){
-		// encaixa o dominó no mosaico
-		if(player_tile->mask[1] != mask){
-			player_tile->mask[0] = player_tile->mask[1];
-			player_tile->mask[1] = mask;
+	if(!pos){
+		// o dominó encaixa à esquerda
+		mask = mosaic_tile->mask[0];
+		if(player_tile->mask[0] == mask || player_tile->mask[1] == mask){
+			// encaixa o dominó no mosaico
+			if(player_tile->mask[1] != mask){
+				player_tile->mask[0] = player_tile->mask[1];
+				player_tile->mask[1] = mask;
+			}
+			// ligação ao mosaico
+			player_tile->next = mosaic_tile;//proximo
+			mosaic_tile->prev = player_tile;//anterior
+			// nó (head/ponta) principal do mosaico
+			head_game->mosaic = player_tile;
+			return head_game->mosaic;
 		}
-		// ligação ao mosaico
-		player_tile->next = mosaic_tile;//proximo
-		mosaic_tile->prev = player_tile;//anterior
-		// nó (head/ponta) principal do mosaico
-		head_game->mosaic = player_tile;
-		return head_game->mosaic;
 	}
-}
-//*
 
 	// o mosaico tem apenas um dominó
 	if(mosaic_tile->next == NULL) {
