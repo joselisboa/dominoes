@@ -2,7 +2,6 @@
 #include "public.h"
 #include "server.c"
 
-//-----------------------------------------------------------------------------
 // DOMINOES daemon
 int main(int argc, char *charv[]){
     char actions[A][5] = {"show", "close"};   
@@ -32,31 +31,21 @@ int main(int argc, char *charv[]){
     signal(SIGUSR2, stop);
     signal(SIGALRM, init);
 
-    // create public FIFO (server)
+    // create public fifo (server)
     if(mkfifo(DOMINOS, 0666) < 0) exit(1);
     
     // keep public fifo open
     while(TRUE){
+        // open public fifo in read only mode
+        if((server_fifo = open(DOMINOS, O_RDONLY)) < 0) exit(cleanup());
 
-        // open public FIFO in read only mode
-        if((server_fifo = open(DOMINOS, O_RDONLY)) < 0) {
-            perror("FIFO ERROR");
-            exit(1);
-        }
-
-        // Listen for requests on the public FIFO
-        while(read(server_fifo, &req, sizeof(req)) > 0){
-            res = router(req, res);
-
-            // send response through client's FIFO
-            if(!send(res, req)) {
-                perror("Did not access the client fifo\n");
-                break;
-            }
-        }
+        // Listen for requests on the public fifo
+        while(read(server_fifo, &req, sizeof(req)) > 0)
+            // send response through client's fifo
+            if(!send((res = router(req, res)), req)) break;
     }
 
     close(server_fifo);
 
-    return cleanup();
+    exit(cleanup());
 }

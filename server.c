@@ -57,6 +57,18 @@ char messages[8][32] = {
 //TODO split file  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
 //                                                                     server.c
 //-----------------------------------------------------------------------------
+int t(){
+    time_t now_t, diff_t;
+
+    if(!games->done && !games->start_t){
+        time(&now_t);
+        diff_t = difftime(now_t, games->create_t);        
+        return (games->t - (int) diff_t);
+    }
+
+    return -1;
+}
+
 // request router
 struct response router(struct request req, struct response res){
     char action[8], param2[8];
@@ -138,7 +150,8 @@ void stop(int sig){
         kill((*node).pid, SIGUSR2);
         node = node->prev;
     }
-    cleanup();
+
+    exit(cleanup());
 }
 
 //-----------------------------------------------------------------------------
@@ -183,9 +196,8 @@ struct response status(struct request req){
     struct response res = resdef(1, "OK status", req);
     struct game *game = games;
     struct player *player = NULL;
-    char msg[256];
+    char msg[256] = {'\0'};
     int n;
-    msg[0]='\0';
 
     strcpy(res.msg, "GAME STATUS");
     
@@ -193,7 +205,10 @@ struct response status(struct request req){
     else while(game != NULL){
         sprintf(msg, "\n%d %s", game->id, game->name);
         strcat(res.msg, msg);
-        if(!game->start_t && !game->done) strcat(res.msg, " (waiting)");
+        if(!game->start_t && !game->done) {  
+            sprintf(msg, " (starts in %d sec)", t());
+            strcat(res.msg, msg);
+        }
         else if(!game->done) strcat(res.msg, " (playing)");
         else if(game->start_t)  strcat(res.msg, " (done)");
         else strcat(res.msg, " (expired)");
@@ -324,6 +339,7 @@ struct response add_game(struct request req){
     games = new_game(games);
     strcpy(games->name, name);
     games->t = t;
+    time(&games->create_t);
 
     signal(SIGALRM, init);
     alarm(t);
@@ -359,8 +375,9 @@ struct response play_game(struct request req){
     }
     // available game
     else if(!games->done){
-        sprintf(res.msg, "subscribed to '%s'", games->name);
-        //               "game will start in %d seconts"
+        sprintf(res.msg, 
+            "subscribed to '%s'\nthe game starts in %d seconds", 
+            games->name, t());
 
         if(games->start_t == 0) {
             user = get_player_by_id(req.player_id, players);
@@ -567,7 +584,7 @@ struct response play_tile(struct request req){
         }
 
         DELIVERY:
-        sprintf(res.msg, "placed tile %d", tile_id);
+        sprintf(res.msg, "you placed tile %d", tile_id);
 
         buzz(1);
     }
@@ -740,7 +757,7 @@ struct response leaves(struct request req){
 //-----------------------------------------------------------------------------
 // GIVEUP quits game
 struct response giveup(struct request req){
-    struct response res = resdef(1, "OK quiter", req);
+    struct response res = resdef(1, "OK quitter", req);
     struct player *winner, *player = NULL;
     struct domino *tile = NULL;
     int i=0, n=0;
@@ -1005,7 +1022,9 @@ void buzz(int t){
     }    
 }
 
+//-----------------------------------------------------------------------------
+// deleted public fifo
 int cleanup(){
     unlink(DOMINOS);
-    exit(0);
+    return 1;
 }
