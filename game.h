@@ -20,6 +20,7 @@ struct game {
     time_t start_t;
     int t;
     time_t end_t;
+    time_t create_t;
     char name[32];
 	struct domino *tiles;// peças
 	struct domino *mosaic;// mosaico
