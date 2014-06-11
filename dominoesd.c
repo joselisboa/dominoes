@@ -8,7 +8,9 @@ int main(int argc, char *charv[]){
     int i, sigs[A] = {SIGUSR1, SIGUSR2};
 
     // run in the background
-    if(fork() > 0) return;
+    if(fork() > 0){
+        return;
+    }
 
     // 2nd process
     if(procs() > 1) {
@@ -22,7 +24,9 @@ int main(int argc, char *charv[]){
     }
 
     // delete old named pipe
-    if(!access(DOMINOS, F_OK)) unlink(DOMINOS);
+    if(!access(DOMINOS, F_OK)) {
+        unlink(DOMINOS);
+    }
 
     // signal handlers setup
     signal(SIGUSR1, show);
@@ -30,17 +34,21 @@ int main(int argc, char *charv[]){
     signal(SIGALRM, init);
 
     // create public fifo (server)
-    if(mkfifo(DOMINOS, 0666) < 0) exit(1);
+    if(mkfifo(DOMINOS, 0666) < 0){
+        exit(1);
+    }
     
     // keep public fifo open
     while(TRUE){
         // open public fifo in read only mode
-        if((server_fifo = open(DOMINOS, O_RDONLY)) < 0) exit(cleanup());
+        if((server_fifo = open(DOMINOS, O_RDONLY)) < 0){
+            exit(cleanup());
+        }
 
         // Listen for requests on the public fifo
         while(read(server_fifo, &req, sizeof(req)) > 0){
             // send response to client
-            if(!send(router(req))){
+            if(!send(router())){
                 break;                
             }             
         }
