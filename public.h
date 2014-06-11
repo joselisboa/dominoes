@@ -26,7 +26,7 @@ char *C_CMDS[C] = {
     "new", "play", "quit", "start", "shutdown",
     "restart", "games"};
 
-typedef struct request {
+typedef struct _request {
 	int pid;
 	int player_id;
     char name[32];
@@ -34,14 +34,14 @@ typedef struct request {
 	char cmd[64];
 } Request;
 
-typedef struct response {
+typedef struct _response {
 	int pid;
 	char msg[512];
-	struct request req;
+	struct _request req;
 	int cmd;// 0:msg, 1:quit, -1:error
 } Response;
 
-typedef struct move {
+typedef struct _move {
     int move;// {1,2,3,...} 
     char name[32];// name of the game
     char msg[256];// server message
@@ -60,8 +60,9 @@ int send_signal(int pid, int SIG){
 // ----------------------------------------------------------------------------
 // Gets the PID from a running process 
 int getzpid(char proc[]){
-    char buffer[16], format[64];
+    char buffer[16], command[64];
     FILE *finput;
+    int fd_finput;
     int i, j, k = strlen(proc), n;
 
     for(i=k; i>0; i--){
@@ -72,11 +73,21 @@ int getzpid(char proc[]){
     }
 
     //ps X | grep server$ | grep -o [^ ]* | head -1
-    sprintf(format, "pgrep %s | head -1", buffer);
+    sprintf(command, "pgrep %s | head -1", buffer);
     buffer[0] = '\0';
 
-    finput = popen(format, "r");
-    if((n = read(fileno(finput), buffer, 15)) > 0) buffer[n] = '\0';
+    // open read only pipe to shell and execute command
+    if((finput = popen(command, "r")) == NULL){
+        // failed
+    }
+
+    // int file descriptor associated to stream
+    fd_finput = fileno(finput);
+    
+    // read stream
+    if((n = read(fd_finput, buffer, 15)) > 0) buffer[n] = '\0';
+    
+    // close the pipe
     pclose(finput);
 
     return atoi(buffer);
