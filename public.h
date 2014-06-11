@@ -26,29 +26,29 @@ char *C_CMDS[C] = {
     "new", "play", "quit", "start", "shutdown",
     "restart", "games"};
 
-struct request {
+typedef struct request {
 	int pid;
 	int player_id;
     char name[32];
 	char fifo[32];
 	char cmd[64];
-};
+} Request;
 
-struct response {
+typedef struct response {
 	int pid;
 	char msg[512];
 	struct request req;
 	int cmd;// 0:msg, 1:quit, -1:error
-};
+} Response;
 
-struct move {
+typedef struct move {
     int move;// {1,2,3,...} 
     char name[32];// name of the game
     char msg[256];// server message
     int turn; // next player {-1,0,1,2,3} (-1 for game over) 
     int winner; // {-1,0,1,2,3} (-1 for no winner)  
     char players[4][32];// [0,1,2,3]
-};
+} Move;
 
 int send_signal(int pid, int SIG){
     int ret;
