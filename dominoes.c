@@ -17,7 +17,7 @@ int main(int argc, char *argv[]){
     // create the private fifo (client)
     sprintf(req.fifo, "%s_%d", FIFOPATH, getpid());
 
-    if(mkfifo(req.fifo, 0666) < 0) {
+    if(mkfifo(req.fifo, 0666) < 0){
         exit(1);
     }
 
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
     LOGIN:
     
     // authenticate or exit
-    if(!auth(req.name)) {
+    if(!auth(req.name)){
         exit(cleanup("bye"));
     }
 
