@@ -9,32 +9,33 @@ int blocked();
 int cleanup();
 int procs();
 int count_players();
-int send(struct response, struct request);
-struct response player_tiles(struct request);
-struct response game_tiles(struct request);
-struct response play_tile(struct request);
-struct response play_game(struct request);
-struct response giveup(struct request);
-struct response leaves(struct request);
-struct response login(struct request);
-struct response info(struct request);
-struct response info(struct request);
-struct response get(struct request);
-struct response pass(struct request);
-struct response help(struct request);
-struct response ni(struct request);
-struct response users(struct request);
-struct response status(struct request);
-struct response add_game(struct request);
-struct response list_games(struct request);
-struct response list_players(struct request);
-struct response router(struct request, struct response);
-struct response resdef(int, char [], struct request);
+int send(Response);
+Response player_tiles();
+Response game_tiles();
+Response play_tile();
+Response play_game();
+Response giveup();
+Response leaves();
+Response login();
+Response info();
+Response info();
+Response get();
+Response pass();
+Response help();
+Response ni();
+Response users();
+Response status();
+Response add_game();
+Response list_games();
+Response list_players();
+Response router();
+Response resdef(int, char []);
 struct player *players = NULL;
 struct player *playing = NULL;
 struct player *last_move = NULL;
 struct game *games = NULL;
-struct move move;
+Move move;
+Request req;
 int client_fifo, server_fifo;// important!
 void players_string(char []);
 void games_string(char []);
@@ -70,7 +71,7 @@ int t(){
 }
 
 // request router
-struct response router(struct request req, struct response res){
+Response router(){
     char action[8], param2[8];
     int n, i, param1;
 
@@ -108,10 +109,7 @@ struct response router(struct request req, struct response res){
             case 6: return help(req);
             case 7: return giveup(req);
             case 9: return list_players(req);
-            default: 
-                res = ni(req);
-                res.cmd = 0;
-                return res;
+            default: return ni(req);
         }
     }
 }
@@ -192,8 +190,8 @@ void show(int sig){
 
 //-----------------------------------------------------------------------------
 // STATUS
-struct response status(struct request req){
-    struct response res = resdef(1, "OK status", req);
+Response status(){
+    Response res = resdef(1, "OK status");
     struct game *game = games;
     struct player *player = NULL;
     char msg[256] = {'\0'};
@@ -231,8 +229,8 @@ struct response status(struct request req){
 
 //-----------------------------------------------------------------------------
 // USERS list users logged in
-struct response users(struct request req){
-    struct response res = resdef(1, "OK users", req);
+Response users(){
+    Response res = resdef(1, "OK users");
     char msg[512];
     players_string(msg);
     strcpy(res.msg, msg);
@@ -256,8 +254,8 @@ void players_string(char string[]){
 
 //-----------------------------------------------------------------------------
 // GAMES list games
-struct response list_games(struct request req){
-    struct response res = resdef(1, "OK games", req);
+Response list_games(){
+    Response res = resdef(1, "OK games");
     char msg[512];
     if(games == NULL){
         res.cmd = 0;
@@ -296,8 +294,8 @@ void games_string(char string[]){
 
 //-----------------------------------------------------------------------------
 // PLAYERS lists players in live game
-struct response list_players(struct request req){
-    struct response res = resdef(1, "OK listing players", req);
+Response list_players(){
+    Response res = resdef(1, "OK listing players");
     struct player *node = NULL;
     char msg[512] = {'\0'};
     char line[64] = {'\0'};
@@ -321,8 +319,8 @@ struct response list_players(struct request req){
 
 //-----------------------------------------------------------------------------
 // NEW (Add Game)
-struct response add_game(struct request req){
-    struct response res = resdef(1, "OK new", req);
+Response add_game(){
+    Response res = resdef(1, "OK new");
     char name[32];
     int t, pid;
     name[0] = '\0';
@@ -348,8 +346,8 @@ struct response add_game(struct request req){
 
 //-----------------------------------------------------------------------------
 // PLAY (adds player to game)
-struct response play_game(struct request req){
-    struct response res = resdef(1, "OK play", req);
+Response play_game(){
+    Response res = resdef(1, "OK play");
     struct player node, *user = NULL, *player = NULL;
     int i, n;
 
@@ -403,9 +401,9 @@ struct response play_game(struct request req){
 
 //-----------------------------------------------------------------------------
 // LOGIN
-struct response login(struct request req){
+Response login(){
     struct player *aux_player = NULL;
-    struct response res = resdef(1, "OK welcome", req);
+    Response res = resdef(1, "OK welcome");
 
     aux_player = get_player_by_name(req.name, players);
 
@@ -426,8 +424,8 @@ struct response login(struct request req){
 
 //-----------------------------------------------------------------------------
 // INFO
-struct response info(struct request req){
-    struct response res = resdef(1, "OK info", req);
+Response info(){
+    Response res = resdef(1, "OK info");
     struct player *node = NULL;
     char string[128];
     string[0] = '\0';
@@ -460,8 +458,8 @@ struct response info(struct request req){
 
 //-----------------------------------------------------------------------------
 // TILES response with player tiles
-struct response player_tiles(struct request req){
-    struct response res = resdef(1, "OK tiles", req);
+Response player_tiles(){
+    Response res = resdef(1, "OK tiles");
     struct player *player = get_player_by_name(req.name, games->players);
     char hand[128];
     strcpy(res.msg, "your tiles");   
@@ -472,8 +470,8 @@ struct response player_tiles(struct request req){
 
 //-----------------------------------------------------------------------------
 // GAME response with mosaic tiles
-struct response game_tiles(struct request req){
-    struct response res = resdef(1, "OK tiles", req);
+Response game_tiles(){
+    Response res = resdef(1, "OK tiles");
     char hand[128];
     
     if(games != NULL && !games->done){
@@ -491,8 +489,8 @@ struct response game_tiles(struct request req){
 
 //-----------------------------------------------------------------------------
 // PLAY places tile on mosaic
-struct response play_tile(struct request req){
-    struct response res = resdef(1, req.cmd, req);
+Response play_tile(){
+    Response res = resdef(1, req.cmd);
     struct player *winner = NULL, *player = NULL, *next = NULL;
     struct domino *tile = NULL;
     int tile_id, mask[2], n, i, j, p=0;
@@ -601,8 +599,8 @@ struct response play_tile(struct request req){
 
 //-----------------------------------------------------------------------------
 // GET
-struct response get(struct request req){
-    struct response res = resdef(1, "OK get", req);
+Response get(){
+    Response res = resdef(1, "OK get");
     struct player *player = NULL;
     struct domino *tile = NULL;
     int mask[2];
@@ -653,8 +651,8 @@ struct response get(struct request req){
 
 //-----------------------------------------------------------------------------
 // PASS
-struct response pass(struct request req){
-    struct response res = resdef(1, "OK pass", req);
+Response pass(){
+    Response res = resdef(1, "OK pass");
     struct player *player = NULL;
     struct domino *tile = NULL;
 
@@ -692,8 +690,8 @@ struct response pass(struct request req){
 
 //-----------------------------------------------------------------------------
 // HELP/HINT
-struct response help(struct request req){
-    struct response res = resdef(1, "OK help", req);
+Response help(){
+    Response res = resdef(1, "OK help");
     struct player *player = NULL;
     struct domino *tile = NULL;
     char item[16];
@@ -749,8 +747,8 @@ struct response help(struct request req){
 
 //-----------------------------------------------------------------------------
 // EXIT/LOGOUT leaves
-struct response leaves(struct request req){
-    struct response res = giveup(req);
+Response leaves(){
+    Response res = giveup(req);
     
     // delete user
     players = delete_player_by_name(req.name, players);
@@ -760,8 +758,8 @@ struct response leaves(struct request req){
 
 //-----------------------------------------------------------------------------
 // GIVEUP quits game
-struct response giveup(struct request req){
-    struct response res = resdef(1, "OK quitter", req);
+Response giveup(){
+    Response res = resdef(1, "OK quitter");
     struct player *winner, *player = NULL;
     struct domino *tile = NULL;
     int i=0, n=0;
@@ -907,8 +905,8 @@ void init(int sig){
 
 //-----------------------------------------------------------------------------
 // DEFRES Default Response
-struct response resdef(int cmd, char msg[], struct request req){
-    struct response res;
+Response resdef(int cmd, char msg[]){
+    Response res;
     
     res.pid = getpid();
     strcpy(res.msg, msg);
@@ -919,13 +917,13 @@ struct response resdef(int cmd, char msg[], struct request req){
 
 //-----------------------------------------------------------------------------
 // NI Not Implemented Response
-struct response ni(struct request req){
-    struct response res;
+Response ni(){
+    Response res;
     
     res.pid = getpid();
     strcpy(res.msg, "NOT IMPLEMENTED");
     res.req = req;
-    res.cmd = -1;
+    res.cmd = 0;
     return res;
 }
 
@@ -945,7 +943,7 @@ int procs(){
 
 //-----------------------------------------------------------------------------
 // Send
-int send(struct response res, struct request req){
+int send(Response res){
     int done = 0, n = 0;
 
     do {// Abrir FIFO do cliente em modo de escrita

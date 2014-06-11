@@ -6,8 +6,6 @@
 int main(int argc, char *charv[]){
     char actions[A][5] = {"show", "close"};   
     int i, sigs[A] = {SIGUSR1, SIGUSR2};
-    struct request req;
-    struct response res;
 
     // run in the background
     if(fork() > 0) return;
@@ -40,9 +38,12 @@ int main(int argc, char *charv[]){
         if((server_fifo = open(DOMINOS, O_RDONLY)) < 0) exit(cleanup());
 
         // Listen for requests on the public fifo
-        while(read(server_fifo, &req, sizeof(req)) > 0)
-            // send response through client's fifo
-            if(!send((res = router(req, res)), req)) break;
+        while(read(server_fifo, &req, sizeof(req)) > 0){
+            // send response to client
+            if(!send(router(req))){
+                break;                
+            }             
+        }
     }
 
     close(server_fifo);
