@@ -6,8 +6,7 @@ struct response res;
 
 void play(int);
 void quit(int);
-void print_response(struct response);
-int auth(char name[]);//, char *prompt[], char *format[]){
+int auth(char name[]);
 struct response send();
 void shutdown(int);
 void start(char []);

@@ -16,15 +16,22 @@ int main(int argc, char *argv[]){
 
     // create the private fifo (client)
     sprintf(req.fifo, "%s_%d", FIFOPATH, getpid());
-    if(mkfifo(req.fifo, 0666) < 0) exit(1);
+
+    if(mkfifo(req.fifo, 0666) < 0) {
+        exit(1);
+    }
 
     // open the public fifo (server) in read only mode
-    if((server_fifo = open(DOMINOS, O_WRONLY)) < 0) exit(unlink(req.fifo));
+    if((server_fifo = open(DOMINOS, O_WRONLY)) < 0) {
+        exit(unlink(req.fifo));
+    }
     
     LOGIN:
     
     // authenticate or exit
-    if(!auth(req.name)) exit(cleanup("bye"));
+    if(!auth(req.name)) {
+        exit(cleanup("bye"));
+    }
 
     // send login request to server
     send();
@@ -52,15 +59,20 @@ int main(int argc, char *argv[]){
         write(2, "\n> ", 3);
 
         // input from user
-         while(read(0, &c, 1) >  0)
-            if(c != '\n' && n < 63) req.cmd[n++] = c;
+         while(read(0, &c, 1) >  0){
+            if(c != '\n' && n < 63){
+                req.cmd[n++] = c;
+            }
             else break;
+        }
         
         req.cmd[n] = '\0';
         n = 0;
 
         // validate request or prompt again
-        if(!validate(req.cmd, buffer)) continue;
+        if(!validate(req.cmd, buffer)){
+            continue;
+        }
 
         // send request
         send();
@@ -69,10 +81,14 @@ int main(int argc, char *argv[]){
         strcpy(buffer, chameleon(res.msg, res.cmd?2:4));
 
         // LOGOUT
-        if(!strcmp(req.cmd, "logout")) goto LOGIN;
+        if(!strcmp(req.cmd, "logout")){
+            goto LOGIN;
+        }
 
         // EXIT
-        if(!strncmp("exit", req.cmd, 3)) break;
+        if(!strncmp("exit", req.cmd, 3)){
+            break;
+        }
     }
     
     exit(cleanup("bye"));
