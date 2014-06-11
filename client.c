@@ -1,13 +1,13 @@
 #define FIFOPATH "/tmp/fifo"
 
 int server_fifo, client_fifo;
-struct request req;
-struct response res;
+Request req;
+Response res;
 
 void play(int);
 void quit(int);
 int auth(char name[]);
-struct response send();
+Response send();
 void shutdown(int);
 void start(char []);
 int validate(char [], char []);
@@ -222,9 +222,7 @@ int auth(char name[]){
 
 //-----------------------------------------------------------------------------
 // sends request to server
-struct response send(){
-    //struct response res;
-
+Response send(){
     // enviar dados ao servidor
     write(server_fifo, &req, sizeof(req));
 
@@ -263,7 +261,7 @@ void start(char proc[]){
 //-----------------------------------------------------------------------------
 // PLAY (game play) SIGUSR1 handler
 void play(int sig){
-    struct move status;
+    Move status;
     int len;
 
     // [5] abrir fifo privado em modo de leitura
