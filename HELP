@@ -3,17 +3,18 @@ exit        terminates the program
 logout      terminates the user session
 status      displays game status
 users       lists all users logged in
-new name i  creates a game that accepts players during i seconds
-play        joins the open game
-quit        quits the game where playing
+new <name> <t>  
+            creates a game that starts/expires after t seconds
+play        joins the current open game
+hint        lists the player's tiles that fit the mosaic
+quit        quits the game where the player is playing
 info        displays the live game status
-game        para mostrar o mosaico do jogo
-play i [left|right]
-            places tile i on the mosaic
+game        displayes the game's mosaic
+play <id> [left|right]
+            places the dominoe tile id on the mosaic, if fits
 get         gets a tile from the dominoes stock
 pass        passes turn to play
 giveup      same as quit
-start       starts server
-players     lists last players
+players     lists players in latest game
 games       lists all games
 shutdown    stops server and exits
