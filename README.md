@@ -6,5 +6,7 @@ wookie lab work for UNIX
     $ make clean
     $ make
     $ ./dominoes admin
+    
     ...
-    $ shutdown
+    
+    $ ./dominoesd close
