@@ -646,7 +646,8 @@ Response get(){
         player->name, tile->id, tile->mask[0], tile->mask[1]);
     sprintf(move.msg, "\n%s received a tile", player->name);
     
-    buzz(1);
+    //buzz(0);
+    kill(getpid(), SIGALRM);
 
     return res;
 }
@@ -685,7 +686,8 @@ Response pass(){
         "\n%s passes\n\033[0mwaiting for \033[0;32m%s\033[0m to play",
         req.name, playing->name);
 
-    buzz(1);
+    //buzz(0);
+    kill(getpid(), SIGALRM);
 
     return res;
 }
@@ -809,7 +811,8 @@ Response giveup(){
             }
             
             // inform
-            buzz(1);
+            //buzz(0);
+            kill(getpid(), SIGALRM);
         }
     }
     else {
@@ -1020,7 +1023,7 @@ void inform(int sig){
 //-----------------------------------------------------------------------------
 // like alarm
 void buzz(int t){
-    //sleep(t);
+    sleep(t);
     if(fork() == 0){
         kill(getppid(), SIGALRM);
         exit(0);
