@@ -18,7 +18,6 @@ Response giveup();
 Response leaves();
 Response login();
 Response info();
-Response info();
 Response get();
 Response pass();
 Response help();
@@ -58,6 +57,7 @@ char messages[8][32] = {
 //TODO split file  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ->
 //                                                                     server.c
 //-----------------------------------------------------------------------------
+// t seconds to start
 int t(){
     time_t now_t, diff_t;
 
@@ -78,9 +78,11 @@ Response router(){
     // parse client request
     n = sscanf(req.cmd, "%s %d %s", action, &param1, param2);
     
-    for(i=0; i<C; i++) 
-        if(strcmp(C_CMDS[i], action) == 0) 
+    for(i=0; i<C; i++) {
+        if(strcmp(C_CMDS[i], action) == 0) {
             break;
+        }
+    }
     
     // client commands
     switch(i) {
@@ -1031,7 +1033,7 @@ void buzz(int t){
 }
 
 //-----------------------------------------------------------------------------
-// deleted public fifo
+// delete public fifo
 int cleanup(){
     unlink(DOMINOS);
     return 1;
