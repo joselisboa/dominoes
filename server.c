@@ -696,7 +696,7 @@ Response help(){
     Response res = resdef(1, "OK help");
     struct player *player = NULL;
     struct domino *tile = NULL;
-    char item[16];
+    char item[32] = {'\0'};
     int mask[2];
 
     if(games == NULL || games->players == NULL || games->done) {
@@ -736,8 +736,6 @@ Response help(){
         }
         tile = tile->next;
     }
-    
-    res.msg[strlen(res.msg)-1] = '\0';
 
     if(res.msg[0] == '\0') {
         strcpy(res.msg, "you have nothing");
