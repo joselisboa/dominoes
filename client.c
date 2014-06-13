@@ -52,7 +52,7 @@ int validate(char command[], char buffer[]){
             }
             
             if(atoi(param2) < 1){
-                strcpy(buffer, 
+                strcpy(buffer,
                     chameleon("parameter 2 must be a positive number", 4));
                 return 0;
             }
@@ -264,20 +264,25 @@ void play(int sig){
     Move status;
     int len;
 
-    // [5] abrir fifo privado em modo de leitura
+    // abrir fifo privado em modo de leitura
     if((client_fifo = open(req.fifo, O_RDONLY)) < 0){
         perror(req.fifo);
         return;
     }
 
-    // [6] ler dados
+    // ler dados
     read(client_fifo, &status, sizeof(status));
+    
     // fechar o fifo do cliente
     close(client_fifo);
 
     // get game info
-    if(status.move == 1) playing = true;
-    else if(status.turn == -1) playing = false;
+    if(status.move == 1){
+        playing = true;
+    }
+    else if(status.turn == -1) {
+        playing = false;
+    }
 
     puts(status.msg);
     printf("> ");

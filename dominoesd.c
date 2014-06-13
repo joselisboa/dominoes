@@ -52,9 +52,8 @@ int main(int argc, char *charv[]){
                 break;                
             }             
         }
+        close(server_fifo);
     }
-
-    close(server_fifo);
 
     exit(cleanup());
 }

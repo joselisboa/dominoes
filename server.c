@@ -586,7 +586,9 @@ Response play_tile(){
         sprintf(res.msg, "you played tile %d:[%d,%d]", 
             tile_id, tile->mask[0], tile->mask[1]);
 
-        buzz(1);
+        //buzz(0);
+        kill(getpid(), SIGALRM);
+
     }
     // tile does NOT fit mosaic    
     else{
@@ -865,35 +867,33 @@ void init(int sig){
         // send data to players
         player = games->players;
         while(player != NULL){
+            move.turn = 1;
+            move.msg[0] = '\0';
+            tile[0] = '\0';
+
+            sprintf(move.msg, "\nstarting %s", games->name);                   
+            strcat(move.msg, chameleon("\nyour dominoes", 2));
+
+            tiles_string(hand, player->tiles);
+            strcat(move.msg, chameleon(hand, 2));  
+            
+            sprintf(hand, "\nwaiting for %s to play", 
+                chameleon(playing->name, 3));
+            strcat(move.msg, hand);
+
             kill(player->pid, SIGUSR1);
             done = 0;
             k = 0;
-            
             //TODO send_move(fifo, move);
 
             do {// abrir FIFO do jogador em modo de escrita
-                if((player_fifo = open(player->fifo,O_WRONLY|O_NDELAY)) == -1){
-                  sleep(5);
+                if((player_fifo = open(player->fifo, O_WRONLY)) == -1){
+                  sleep(2);
                 }
-                else {
-                    move.turn = 1;
-                    move.msg[0] = '\0';
-                    tile[0] = '\0';
-
-                    sprintf(move.msg, "\nstarting %s", games->name);                   
-                    strcat(move.msg, chameleon("\nyour dominoes", 2));
-
-                    tiles_string(hand, player->tiles);
-                    strcat(move.msg, chameleon(hand, 2));  
-                    
-                    sprintf(hand, "\nwaiting for %s to play", 
-                        chameleon(playing->name, 3));
-                    strcat(move.msg, hand);
-                                        
+                else {                    
                     // enviar resposta pelo FIFO do jogador
                     write(player_fifo, &move, sizeof(move));
                     close(player_fifo);
-                    sleep(1);// sleep existe (para alguma coisa serve) 
                     done = 1;
                 }
             } while(k++ < 5 && !done);
@@ -1004,13 +1004,12 @@ void inform(int sig){
             done = 0;
             k = 0;
             do {// abrir FIFO do jogador em modo de escrita
-                if((player_fifo = open(player->fifo, 
-                    O_WRONLY|O_NDELAY)) == -1)
-                    sleep(5);
+                if((player_fifo = open(player->fifo, O_WRONLY)) == -1){
+                    sleep(2);
+                }
                 else {
                     write(player_fifo, &move, sizeof(move));
                     close(player_fifo);
-                    sleep(1); // sleep existe, gostem ou não
                     done = 1;
                 }
             } while(k++ < 5 && !done);          
@@ -1023,7 +1022,7 @@ void inform(int sig){
 //-----------------------------------------------------------------------------
 // like alarm
 void buzz(int t){
-    sleep(t);// sleep(1) is here, deal with it 
+    //sleep(t);
     if(fork() == 0){
         kill(getppid(), SIGALRM);
         exit(0);
