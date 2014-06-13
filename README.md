@@ -1,7 +1,6 @@
-SECRET WOOKIE
-=============
-wookie lab work for UNIX  
-[very unstable newbee work]  
+DOMINOES
+========
+School Assigment for UNIX/Linux OS  
     
     $ make clean
     $ make
