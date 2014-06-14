@@ -1,5 +1,7 @@
 #define A 2 
 
+int ntiles = 7;
+
 void init(int);
 void inform(int);
 void stop(int);
@@ -847,11 +849,13 @@ void init(int sig){
     char hand[128], tile[16];
     struct domino *tiles;
 
+    if(ntiles > 7 || ntiles < 1) ntiles = 7;
+
     if(count_players() > 1){
         signal(SIGALRM, inform);
   
         // distribute dominoes
-        start(games);
+        start(games, ntiles);
         time(&games->start_t);
         
         strcpy(move.name, games->name);

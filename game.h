@@ -49,7 +49,7 @@ struct domino *stock();
 
 struct domino *tiles();
 
-void start(struct game *game);
+void start(struct game *game, int n);
 
 struct game *new_game(struct game *games);
 

@@ -75,7 +75,7 @@ void ui(){
 					break;
 				}
 
-				start(game);
+				start(game, 7);
 				game = play(game);
 
 				//TODO Result

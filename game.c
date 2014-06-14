@@ -92,17 +92,21 @@ struct domino *tiles(){
 }
 
 // distribute dominos
-void start(struct game *game){
+void start(struct game *game, int n){
 	struct domino *tile;
 	struct player *player;
 	int i;
+
+	if(n<1 || n>7) n = 7;
+
+	if(game->players == NULL) return;
 
 	player = game->players;
 	while(player != NULL){
 		player->tiles = game->tiles;
 		player->tiles->prev = NULL;
-		i=0;
-		while(game->tiles != NULL && i<6){
+		i=1;
+		while(game->tiles != NULL && i<n){
 			game->tiles = game->tiles->next;
 			i++;
 		}

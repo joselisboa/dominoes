@@ -3,8 +3,8 @@
 #include "server.c"
 
 // DOMINOES daemon
-int main(int argc, char *charv[]){
-    char actions[A][5] = {"show", "close"};   
+int main(int argc, char *charv[], char *envp[]){
+    char *n, actions[A][8] = {"show", "close"};   
     int i, sigs[A] = {SIGUSR1, SIGUSR2};
 
     // run in the background
@@ -14,12 +14,13 @@ int main(int argc, char *charv[]){
 
     // 2nd process
     if(procs() > 1) {
-        for(i=0; i<A; i++)
-            if(!strcmp(actions[i], charv[1])) {
+        for(i=0; i<A; i++){          
+            if(strcmp(actions[i], charv[1]) == 0) {
                 kill(getzpid(SERVER), sigs[i]);
                 break;
             }
-
+        }
+            
         exit(0);
     }
 
@@ -36,6 +37,10 @@ int main(int argc, char *charv[]){
     // create public fifo (server)
     if(mkfifo(DOMINOS, 0666) < 0){
         exit(1);
+    }
+
+    if((n = getenv("NTILES")) != NULL){
+        ntiles = atoi(n);
     }
     
     // keep public fifo open
