@@ -845,7 +845,7 @@ int count_players(){
 void init(int sig){
     struct player *node, *player = games->players;;
     int player_fifo;
-    int done, k, i=0, n = count_players();
+    int i = 0, n = count_players();
     char hand[128], tile[16];
     struct domino *tiles;
 
@@ -888,22 +888,27 @@ void init(int sig){
                 chameleon(playing->name, 3));
             strcat(move.msg, hand);
 
+            // signal player to receive on his fifo
             kill(player->pid, SIGUSR1);
-            done = 0;
-            k = 0;
-            //TODO send_move(fifo, move);
 
-            do {// abrir FIFO do jogador em modo de escrita
-                if((player_fifo = open(player->fifo, O_WRONLY)) == -1){
-                  sleep(2);
-                }
-                else {                    
-                    // enviar resposta pelo FIFO do jogador
-                    write(player_fifo, &move, sizeof(move));
-                    close(player_fifo);
-                    done = 1;
-                }
-            } while(k++ < 5 && !done);
+            // abrir FIFO do jogador em modo de escrita
+            if((player_fifo = open(player->fifo, O_WRONLY)) == -1){
+              perror("opening player's fifo");
+              exit(-1);
+            }
+
+            // enviar resposta pelo FIFO do jogador
+            if(write(player_fifo, &move, sizeof(move)) == -1){
+                perror("writing to player's fifo");
+                //exit(-1);
+            }
+            
+            // close player's fifo
+            if(close(player_fifo) == -1) {
+                perror("closing player's fifo");
+                //exit(-1);
+            }
+            
             player = player->prev;
         }
     }
@@ -951,18 +956,27 @@ int procs(){
 //-----------------------------------------------------------------------------
 // Send
 int send(Response res){
-    int done = 0, n = 0;
-
-    do {// Abrir FIFO do cliente em modo de escrita
-        if((client_fifo = open(req.fifo, O_WRONLY | O_NDELAY)) == -1) sleep(5);
-        else {// [5] Enviar resposta pelo FIFO do cliente
-            write(client_fifo, &res, sizeof(res));
-            close(client_fifo);
-            done = 1;
+    // Abrir FIFO do cliente em modo de escrita
+    if((client_fifo = open(req.fifo, O_WRONLY)) == -1){
+        perror("openning client fifo");
+        return 0;
+    }
+    
+    // Enviar resposta pelo FIFO do cliente
+    if(write(client_fifo, &res, sizeof(res)) == -1){
+        perror("writing to client fifo");      
+        if(close(client_fifo) == -1){
+            perror("closing client fifo");  
         }
-    } while(n++ < 5 && !done);
+        return 0;        
+    }
+    
+    if(close(client_fifo) == -1){
+        perror("closing client fifo");
+    }
+
     res.msg[0] = '\0';
-    return done;
+    return 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -1000,7 +1014,7 @@ void mosaic_string(char string[]){
 void inform(int sig){
     struct player *node, *player = games->players;
     int player_fifo;
-    int deliver, done, k, i=0, n = count_players();
+    int deliver, i=0, n = count_players();
 
     // enviar dados aos jogadores do jogo
     player = games->players;
@@ -1008,18 +1022,23 @@ void inform(int sig){
         deliver = games->done ? TRUE : (player != last_move);
         if(deliver){
             kill(player->pid, SIGUSR1);
-            done = 0;
-            k = 0;
-            do {// abrir FIFO do jogador em modo de escrita
-                if((player_fifo = open(player->fifo, O_WRONLY)) == -1){
-                    sleep(2);
-                }
-                else {
-                    write(player_fifo, &move, sizeof(move));
-                    close(player_fifo);
-                    done = 1;
-                }
-            } while(k++ < 5 && !done);          
+
+            // abrir FIFO do jogador em modo de escrita
+            if((player_fifo = open(player->fifo, O_WRONLY)) == -1){
+                perror("openning player's fifo");
+                exit(-1);
+            }
+
+            if(write(player_fifo, &move, sizeof(move)) == -1){
+                perror("writing to player's fifo");
+                //exit(-1);
+            }
+
+            if(close(player_fifo) == -1){
+                perror("closing player's fifo");
+                //exit(-1);
+            }
+      
         }
         player = player->prev;
     }
