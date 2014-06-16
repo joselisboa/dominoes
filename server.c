@@ -891,13 +891,13 @@ void init(int sig){
             // signal player to receive on his fifo
             kill(player->pid, SIGUSR1);
 
-            // abrir FIFO do jogador em modo de escrita
+            // open player's fifo in read only mode
             if((player_fifo = open(player->fifo, O_WRONLY)) == -1){
               perror("opening player's fifo");
               exit(-1);
             }
 
-            // enviar resposta pelo FIFO do jogador
+            // send move through player's fifo
             if(write(player_fifo, &move, sizeof(move)) == -1){
                 perror("writing to player's fifo");
                 //exit(-1);
@@ -956,13 +956,13 @@ int procs(){
 //-----------------------------------------------------------------------------
 // Send
 int send(Response res){
-    // Abrir FIFO do cliente em modo de escrita
+    // Open client's fifo in write mode
     if((client_fifo = open(req.fifo, O_WRONLY)) == -1){
         perror("openning client fifo");
         return 0;
     }
     
-    // Enviar resposta pelo FIFO do cliente
+    // Send response through client's fifo
     if(write(client_fifo, &res, sizeof(res)) == -1){
         perror("writing to client fifo");      
         if(close(client_fifo) == -1){
@@ -1016,14 +1016,16 @@ void inform(int sig){
     int player_fifo;
     int deliver, i=0, n = count_players();
 
-    // enviar dados aos jogadores do jogo
+    // inform players about the move
     player = games->players;
     while(player != NULL){
+        // deliver to all except the move's executer
         deliver = games->done ? TRUE : (player != last_move);
         if(deliver){
+            // signal player
             kill(player->pid, SIGUSR1);
 
-            // abrir FIFO do jogador em modo de escrita
+            // open player's fifo in write mode
             if((player_fifo = open(player->fifo, O_WRONLY)) == -1){
                 perror("openning player's fifo");
                 exit(-1);
