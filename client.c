@@ -223,18 +223,18 @@ int auth(char name[]){
 //-----------------------------------------------------------------------------
 // sends request to server
 Response send(){
-    // enviar dados ao servidor
+    // send request to server
     write(server_fifo, &req, sizeof(req));
 
-    // abrir fifo privado em modo de leitura
+    // open private fifo in read only mode
     if((client_fifo = open(req.fifo, O_RDONLY)) < 0){
         perror(req.fifo);
         exit(-1);
     }
-    // ler dados
+    // read response
     read(client_fifo, &res, sizeof(res));
 
-    // fechar o fifo
+    // close the client's fifo
     close(client_fifo);
 
     return res;
@@ -264,19 +264,19 @@ void play(int sig){
     Move status;
     int len;
 
-    // abrir fifo privado em modo de leitura
+    // open private fifo in read only mode
     if((client_fifo = open(req.fifo, O_RDONLY)) < 0){
         perror(req.fifo);
         return;
     }
 
-    // ler dados
+    // read move status
     read(client_fifo, &status, sizeof(status));
     
-    // fechar o fifo do cliente
+    // close private fifo 
     close(client_fifo);
 
-    // get game info
+    // set playing status
     if(status.move == 1){
         playing = true;
     }
@@ -321,7 +321,7 @@ int is_playing(char buffer[]){
 }
 
 //-----------------------------------------------------------------------------
-// executa o servidor se o seu FIFO não existir
+// starts the server, if the server is not running
 void status(int argc, char *argv[]){
     if(!getzpid(SERVER)) {
          if(argc > 1 && strcmp(argv[1], "admin") == 0) start(SERVER);
